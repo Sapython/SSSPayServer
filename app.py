@@ -14,6 +14,7 @@
 
 import signal
 import sys
+import requests
 from types import FrameType
 
 from flask import Flask
@@ -22,6 +23,10 @@ from utils.logging import logger
 
 app = Flask(__name__)
 
+@app.route('/test')
+def test():
+    response = requests.get('http://checkip.dyndns.org/')
+    return response.text
 
 @app.route("/")
 def hello() -> str:

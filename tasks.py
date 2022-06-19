@@ -26,7 +26,7 @@ from typing import List
 from invoke import task
 
 venv = "source ./venv/bin/activate"
-GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT")
+GOOGLE_CLOUD_PROJECT = "ssspay-prod"
 
 
 @task
