@@ -27,9 +27,9 @@ LpgInstance = LPG(app)
 def authorize():
     if (request.is_json):
         try:
-            return authService.verifyToken(request.json())
+            return authService.verifyToken(request.json)
         except Exception as e:
-            print('TRT Exception: ', e)
+            return {'error': 'Invalid token'}, 400
     else:
         return ({'error': 'No token'}, 400)
 
@@ -37,104 +37,168 @@ def authorize():
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-
-@app.route('/getAepsBalance',methods=['POST'])
-def getAepsBalance():
-    auth = authorize()
-    if(auth[1]!=200):
-        return jsonify(auth[0]), auth[1]
-    aeps.getBalance(0.543534, 0.54353453, '234567890', '87687687', '192.168.29.208', '12341234234', 'bank',
-                    '23d4f5678g9h', 'tetetet', 'data', 'pipe', '12 65 76 56', 'transactionType', 'subMerchantId', 'Yes')
-    return 'Encrypted'
-
-
 @app.route('/sendSingleSMS',methods=['POST'])
 def sendSingleSMS():
     auth = authorize()
     if(auth[1]!=200):
         return jsonify(auth[0]), auth[1]
-    try:
-        phoneNo = request.json['phoneNo']
-        message = request.json['message']
-        priority = request.json['priority']
-    except Exception as e:
-        return {'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}, 400
-    try:
-        response = messaging.sendSingleSMS(message, phoneNo, priority)
-        print(response.text)
-        return {'success': response.text}, 200
-    except Exception as e:
-        return {'error': str(e)}, 400
+    if (request.is_json):
+        try:
+            phoneNo = request.json['phoneNo']
+            message = request.json['message']
+            priority = request.json['priority']
+        except Exception as e:
+            return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
+        try:
+            response = messaging.sendSingleSMS(message, phoneNo, priority)
+            print(response.text)
+            return jsonify({'success': response.text}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
 
 @app.route('/sendMultipleSMS',methods=['POST'])
 def sendMultipleSMS():
     auth = authorize()
     if(auth[1]!=200):
         return jsonify(auth[0]), auth[1]
-    try:
-        phoneNo = request.json['phoneNo']
-        message = request.json['message']
-        priority = request.json['priority']
-    except Exception as e:
-        return {'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}, 400
-    try:
-        response = messaging.sendMultiSMS(message, phoneNo, priority)
-        return {'success': response.text}, 200
-    except Exception as e:
-        return {'error': str(e)}, 400
+    if (request.is_json):
+        try:
+            phoneNo = request.json['phoneNo']
+            message = request.json['message']
+            priority = request.json['priority']
+        except Exception as e:
+            return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
+        try:
+            response = messaging.sendMultiSMS(message, phoneNo, priority)
+            return jsonify({'success': response.text}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
 
 @app.route('/scheduleSMS',methods=['POST'])
 def scheduleSMS():
     auth = authorize()
     if(auth[1]!=200):
         return jsonify(auth[0]), auth[1]
-    try:
-        phoneNo = request.json['phoneNo']
-        message = request.json['message']
-        priority = request.json['priority']
-        schedule = request.json['schedule']
-    except Exception as e:
-        return {'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}, 400
-    try:
-        response = messaging.scheduleSMS(message, phoneNo, schedule, priority)
-        return {'success': response.text}, 200
-    except Exception as e:
-        return {'error': str(e)}, 400
+    if (request.is_json):
+        try:
+            phoneNo = request.json['phoneNo']
+            message = request.json['message']
+            priority = request.json['priority']
+            schedule = request.json['schedule']
+        except Exception as e:
+            return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
+        try:
+            response = messaging.scheduleSMS(message, phoneNo, schedule, priority)
+            return jsonify({'success': response.text}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
 
-@app.route('/getSMSBalance')
+@app.route('/getSMSBalance',methods=['GET'])
 def getSMSBalance():
     auth = authorize()
     if(auth[1]!=200):
         return jsonify(auth[0]), auth[1]
     try:
         response = messaging.getBalance()
-        return {'success': response}, 200
+        return jsonify({'success': response}), 200
     except Exception as e:
-        return {'error': str(e)}, 400
+        return jsonify({'error': str(e)}), 400
 
-@app.route('/getMobileOperatorDetail')
+@app.route('/getMobileOperatorDetail',methods=['GET'])
 def getMobileOperatorDetail():
     auth = authorize()
     if(auth[1]!=200):
         return jsonify(auth[0]), auth[1]
     try:
         response = messaging.getMobileOperatorDetail()
-        return {'success': response}, 200
+        return jsonify({'success': response}), 200
     except Exception as e:
-        return {'error': str(e)}, 400
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/getLpgOperators',methods=['POST'])
 def getLpgOperatorList():
     # auth = authorize()
     # if(auth[1]!=200):
     #     return jsonify(auth[0]), auth[1]
+    
     try:
         response = LpgInstance.getOperatorList(mode='online')
         return jsonify(response), 200
     except Exception as e:
-        return {'error': str(e)}, 400
+        return jsonify({'error': str(e)}), 400
 
-@app.route('/',methods=['GET'])
+@app.route('/fetchLpgDetails',methods=['POST'])
+def fetchLpgDetails():
+    # auth = authorize()
+    # if(auth[1]!=200):
+    #     return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            caNumber = request.json['customerNumber']
+            operatorNo = request.json['operatorNumber']
+        except Exception as e:
+            return jsonify({'error': "Please provide a customerNumber and operatorNumber ","mainError":str(e)}), 400
+        try:
+            response = LpgInstance.fetchLpgDetails(caNumber, operatorNo)
+            return jsonify(response), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+@app.route('/lpgRecharge',methods=['POST'])
+def rechargeLpg():
+    # auth = authorize()
+    # if(auth[1]!=200):
+    #     return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            caNumber = request.json['customerNumber']
+            operatorNo = request.json['operatorNumber']
+            amount = request.json['amount']
+            ad1 = request.json['ad1']
+            ad2 = request.json['ad2']
+            ad3 = request.json['ad3']
+            referenceId = request.json['referenceId']
+            latitude = request.json['latitude']
+            longitude = request.json['longitude']
+        except:
+            return {'error': "Please provide a customerNumber, operatorNumber, amount, ad1, ad2, ad3, referenceId, latitude and longitude "}, 400
+        try:
+            response = LpgInstance.rechargeLpg(caNumber, operatorNo, amount, ad1, ad2, ad3, referenceId, latitude, longitude)
+            return jsonify(response), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
+    else:
+        return {'error': "We didn't received your data in json format "}, 400
+
+@app.route('/lpgStatusInquiry',methods=['POST'])
+def LpgStatusInquiry():
+    # auth = authorize()
+    # if(auth[1]!=200):
+    #     return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            referenceId = request.json['referenceId']
+        except:
+            return jsonify({'error': "Please provide a referenceId "}), 400
+        try:
+            response = LpgInstance.getLpgRechargeStatus(referenceId)
+            return jsonify(response), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+            
+
+@app.route('/',methods=['GET','POST'])
 def test():
     # authorize()
     auth = authorize()

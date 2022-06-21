@@ -50,7 +50,7 @@ class LPG:
         """
         payload = json.dumps({"canumber":caNumber,"operator":operatorNo})
         response = requests.request(
-            "POST", self.fetchLpgDetailsUrl, headers=self.headers, data=payload)
+            "POST", self.fetchLpgDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
@@ -84,7 +84,7 @@ class LPG:
         """
         payload = json.dumps({"canumber":caNumber,"operator":operatorNo,"amount":amount,"ad1":ad1,"ad2":ad2,"ad3":ad3,"referenceid":referenceId,"latitude":latitude,"longitude":longitude})
         response = requests.request(
-            "POST", self.rechargeLpgUrl, headers=self.headers, data=payload)
+            "POST", self.rechargeLpgUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
@@ -100,8 +100,11 @@ class LPG:
         """
         payload = json.dumps({"referenceid":referenceId})
         response = requests.request(
-            "POST", self.statusUrl, headers=self.headers, data=payload)
+            "POST", self.statusUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
-            return {'error': 'Cannot fetch status. Try again later'}, 400
+            try:
+                return {'error':response.json()['message'] }, 400
+            except:
+                return {'error': 'Cannot fetch status. Try again later'}, 400
