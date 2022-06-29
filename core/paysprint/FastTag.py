@@ -1,11 +1,7 @@
 import json
-class FasTag:
+class FastTag:
     def __init__(self,app):
-        self.header = {
-            'Authorisedkey': 'MzNkYzllOGJmZGVhNWRkZTc1YTgzM2Y5ZDFlY2EyZTQ=',
-            'Content-Type': 'application/json',
-            'Cookie': 'ci_session=3fef906785afb3c5065ea02619e6ec6143cb3bc2'
-        }
+        self.auth = PaySprintAuth(app)
         self.operatorListUrl = 'https://paysprint.in/service-api/api/v1/service/fastag/Fastag/operatorsList'
         self.fetchConsumerDetailsUrl = 'https://paysprint.in/service-api/api/v1/service/fastag/Fastag/fetchConsumerDetails'
         self.rechargeUrl = 'https://paysprint.in/service-api/api/v1/service/fastag/Fastag/recharge'
@@ -13,7 +9,7 @@ class FasTag:
 
     def getOperatorsList(self):
         response = requests.request(
-            "POST", self.operatorListUrl, headers=self.header)
+            "POST", self.operatorListUrl, headers=self.auth.generatePaysprintAuthHeaders())
         if (response.json()['response_code'] == 1):
             return response.json
         else:
@@ -25,7 +21,7 @@ class FasTag:
             "canumber": caNumber
         })
         response = requests.request(
-            "POST", self.fetchConsumerDetailsUrl, headers=self.header, data=payload)
+            "POST", self.fetchConsumerDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json
         else:
@@ -35,7 +31,7 @@ class FasTag:
         payload = json.dumps({"operator": operator, "canumber": caNumber, "amount": amount, "referenceid": referenceId, "latitude": latitude, "longitude": longitude, "bill_fetch": {"billAmount": billAmount,     "billnetamount": billNetAmount,
                              "dueDate": dueDate,     "maxBillAmount": maxBillAmount,     "acceptPayment": acceptPayment,     "acceptPartPay": acceptPartPay,     "cellNumber": cellNumber,     "userName": userName}})
         response = requests.request(
-            "POST", self.rechargeUrl, headers=self.header, data=payload)
+            "POST", self.rechargeUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json
         else:
@@ -44,7 +40,7 @@ class FasTag:
     def getFastTagStatus(self,referenceId:str):
         payload = json.dumps({"referenceId": referenceId})
         response = requests.request(
-            "POST", self.getStatusURl, headers=self.header, data=payload)
+            "POST", self.getStatusURl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json
         else:

@@ -1,11 +1,14 @@
-import base64
 import json
+import base64
+import requests
 from core.authentication.encryption import Encrypt
+from core.authentication.paysprintAuth import PaySprintAuth
 class AEPS:
     def __init__(self,app):
         super().__init__()
         self.__aeps_url = "https://paysprint.in/service-api/api/v1/service/aeps/balanceenquiry/index"
         self.encryption = Encrypt()
+        self.auth = PaySprintAuth(app)
 
     def encodeBase64(data):
         return base64.b64encode(data)

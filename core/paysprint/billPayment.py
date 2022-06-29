@@ -1,4 +1,6 @@
 import json
+import requests
+from core.authentication.paysprintAuth import PaySprintAuth
 # A class that has methods that make requests to a URL and return a response.
 class BillPayment:
     def __init__(self,app):
@@ -11,11 +13,7 @@ class BillPayment:
         self.fetchBillDetailsUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/fetchbill'
         self.payBillUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/paybill'
         self.statusEnquiryUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/status'
-        self.header = {
-            'Authorisedkey': 'MzNkYzllOGJmZGVhNWRkZTc1YTgzM2Y5ZDFlY2EyZTQ=',
-            'Content-Type': 'application/json',
-            'Cookie': 'ci_session=3fef906785afb3c5065ea02619e6ec6143cb3bc2'
-        }
+        self.auth = PaySprintAuth(app)
 
     def getOperatorList(self, mode: str):
         """
@@ -29,7 +27,7 @@ class BillPayment:
             return {'error': 'Invalid mode'}, 400
         payload = json.dumps({"mode": mode})
         response = requests.request(
-            "POST", self.operatorList, headers=self.header, data=payload)
+            "POST", self.operatorList, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json
         else:
@@ -53,7 +51,7 @@ class BillPayment:
         payload = json.dumps(
             {"operator": operatorNo, "canumber": caNumber, "mode": mode})
         response = requests.request(
-            "POST", self.fetchBillDetailsUrl, headers=self.header, data=payload)
+            "POST", self.fetchBillDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json
         else:
@@ -116,7 +114,7 @@ class BillPayment:
             }
         })
         response = requests.request(
-            "POST", self.payBillUrl, headers=self.header, data=payload)
+            "POST", self.payBillUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json
         else:
@@ -132,7 +130,7 @@ class BillPayment:
         """
         payload = json.dumps({"referenceid": referenceId})
         response = requests.request(
-            "POST", self.statusEnquiryUrl, headers=self.header, data=payload)
+            "POST", self.statusEnquiryUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['status'] == true and response.json()['data']['status'] == '1'):
             return response.json
         else:

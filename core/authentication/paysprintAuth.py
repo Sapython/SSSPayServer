@@ -21,7 +21,7 @@ class PaySprintAuth:
             "partnerId":"PS00716",
             "reqid":str(requestCounter)
         }, "UFMwMDcxNmI5YWIzN2YyZDMzZWM3NDg5YjkzYzAyOGE2ZmNmZDIw", algorithm="HS256")
-        print(encodedJWT)
+        # print(encodedJWT)
         headers = {
             'Token': encodedJWT,
             'Content-Type': 'application/json',

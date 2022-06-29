@@ -1,13 +1,12 @@
+import json
+import requests
+from core.authentication.paysprintAuth import PaySprintAuth
 class LIC:
-    def __init__(self):
+    def __init__(self,app):
         """
         It's a constructor for the class
         """
-        self.header = {
-            'Authorisedkey': 'MzNkYzllOGJmZGVhNWRkZTc1YTgzM2Y5ZDFlY2EyZTQ=',
-            'Content-Type': 'application/json',
-            'Cookie': 'ci_session=3fef906785afb3c5065ea02619e6ec6143cb3bc2'
-        }
+        self.auth = PaySprintAuth(app)
         self.fetchLic = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/fetchlicbill'
         self.payLicBillUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/paylicbill'
         self.licStatus = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/licstatus'
@@ -29,7 +28,7 @@ class LIC:
         payload = json.dumps(
             {"canumber": caNumber, "email": email, "mode": mode})
         response = requests.request(
-            "POST", self.fetchLic, headers=self.header, data=payload)
+            "POST", self.fetchLic, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json
         else:
@@ -97,7 +96,7 @@ class LIC:
                 "billNumber": billNo, "bilAmount": bilAmount, "billnetamount": billNetAmount, "billdate": billDate, "acceptPayment": acceptPayment, "acceptPartPay": acceptPartPay, "cellNumber": cellNumber, "dueFrom": dueFrom, "dueTo": dueTo, "validationId": validationId, "billId": billId
             }})
         response = requests.request(
-            "POST", self.payLicBillUrl, headers=self.header, data=payload)
+            "POST", self.payLicBillUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json
         else:
@@ -113,7 +112,7 @@ class LIC:
         """
         payload = json.dumps({"referenceid": referenceId})
         response = requests.request(
-            "GET", self.licStatus, headers=self.header)
+            "GET", self.licStatus, headers=self.auth.generatePaysprintAuthHeaders())
         if (response.json()['response_code'] == 1):
             return response.json
         else:

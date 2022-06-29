@@ -1,4 +1,7 @@
 import json
+import requests
+from core.authentication.paysprintAuth import PaySprintAuth
+
 class Recharge:
     def __init__(self,app):
         """
@@ -11,11 +14,7 @@ class Recharge:
         :param card_cvv: The 3-digit CVV number on the back of your card
         :param card_expiration_date: The expiration date of the card. It should be in the format MM/YYYY
         """
-        self.header = {
-            'Authorisedkey': 'MzNkYzllOGJmZGVhNWRkZTc1YTgzM2Y5ZDFlY2EyZTQ=',
-            'Content-Type': 'application/json',
-            'Cookie': 'ci_session=3fef906785afb3c5065ea02619e6ec6143cb3bc2'
-        }
+        self.auth = PaySprintAuth(app)
         self.operatorListUrl = 'https://paysprint.in/service-api/api/v1/service/recharge/recharge/getoperator'
         self.doRechargeUrl = 'https://paysprint.in/service-api/api/v1/service/recharge/recharge/dorecharge'
         self.statusEnquiryUrl = 'https://paysprint.in/service-api/api/v1/service/recharge/recharge/status'
@@ -26,9 +25,10 @@ class Recharge:
         :return: The response is being returned.
         """
         response = requests.request(
-            "POST", self.operatorListUrl, headers=self.header)
-        if (response.json()['response_code'] == 1):
-            return response.json
+            "POST", self.operatorListUrl, headers=self.auth.generatePaysprintAuthHeaders())
+        # print(response.json())
+        if (response.json()['responsecode'] == 1):
+            return response.json()
         else:
             return {'error': 'Cannot fetch operators. Try again later'}, 400
 
@@ -49,9 +49,9 @@ class Recharge:
         """
         payload = json.dumps({"operator": operatorNo,"canumber": caNumber,"amount": amount,"referenceid": referenceId})
         response = requests.request(
-            "POST", self.doRechargeUrl, headers=self.header, data=payload)
+            "POST", self.doRechargeUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()
         else:
             return {'error': response.json()['message']}, 400
     
@@ -66,8 +66,8 @@ class Recharge:
         """
         payload = json.dumps({"referenceid": referenceId})
         response = requests.request(
-            "POST", self.statusEnquiryUrl, headers=self.header, data=payload)
+            "POST", self.statusEnquiryUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()  
         else:
             return {'error': response.json()['message']}, 400

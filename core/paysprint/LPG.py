@@ -28,10 +28,8 @@ class LPG:
         if mode != 'online' and mode != 'offline':
             return {'error': 'Invalid mode'}, 400
         payload = json.dumps({"mode":mode})
-        headers = self.auth.generatePaysprintAuthHeaders()
-        print(headers)
         response = requests.request(
-            "POST", self.operatorListUrl, headers=headers)
+            "POST", self.operatorListUrl, headers=self.auth.generatePaysprintAuthHeaders())
         print(response.json())
         if (response.json()['response_code'] == 1):
             return response.json()
