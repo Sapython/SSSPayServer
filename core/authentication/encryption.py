@@ -7,10 +7,13 @@ class Encrypt:
 
     def encrypt(self,text:any):
         length = 16 - (len(text) % 16)
-        print(length)
+        # print(length)
+        # tex = text.encode()
         text += bytes([length])*length
-        print(text)
-        return self.cipher.encrypt(text)
+        # print("ENCRYPT:",text)
+        encryptedData = self.cipher.encrypt(text)
+        # print("ENCRYPTED:",encryptedData)
+        return encryptedData
 
     def encodeHEX(self,message:str):
         return message.encode('hex')

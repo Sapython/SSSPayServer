@@ -22,10 +22,10 @@ class Messaging:
         :return: The response object
         """
         smsType = 'normal'
-        if (len(mobileNo)!=10):
+        if (len(str(mobileNo))!=10):
             raise Exception('Invalid Mobile Number')
             return
-        elif (len(message)>260):
+        elif (len(str(message))>260):
             raise Exception('Message is too long')
             return
         elif (priority !='ndnd' and priority != 'dnd'):
@@ -34,9 +34,9 @@ class Messaging:
         elif (smsType !='normal' and smsType != 'flash'):
             raise Exception('Not a valid sms type')
             return
-        return requests.get(f'http://trans.smsfresh.co/api/sendmsg.php?user={self.user}&pass={self.password}&sender={self.senderId}&phone={mobileNo}&text={message}&priority={priority}&stype={smsType}')
+        return requests.get(f'http://trans.smsfresh.co/api/sendmsg.php?user={self.user}&pass={self.password}&sender={self.senderId}&phone={str(mobileNo)}&text={message}&priority={priority}&stype={smsType}')
     
-    def sendMultiSMS(self,message:str,mobileNos:list[int],priority="dnd"):
+    def sendMultiSMS(self,message:str,mobileNos:list,priority="dnd"):
         """
         It sends a single SMS to a single mobile number
         
@@ -53,7 +53,7 @@ class Messaging:
             if (len(number)!=10):
                 raise Exception('Invalid Mobile Number')
                 return
-        if (len(mobileNo)>0):
+        if (len(mobileNos)>0):
             raise Exception('No Receiver Mobile No Given')
             return
         elif (len(message)>260):
@@ -65,7 +65,7 @@ class Messaging:
         elif (smsType !='normal' or smsType != 'flash'):
             raise Exception('Not a valid sms type')
             return
-        return requests.get(f'http://trans.smsfresh.co/api/sendmsg.php?user={self.user}&pass={self.password}&sender={self.senderId}&phone={mobileNo}&text={message}&priority={priority}&stype={smstype}')
+        return requests.get(f'http://trans.smsfresh.co/api/sendmsg.php?user={self.user}&pass={self.password}&sender={self.senderId}&phone={mobileNos}&text={message}&priority={priority}&stype=normal')
     
     def scheduleSMS(self,message:str,mobileNos:int,time:str,priority='dnd'):
         """
@@ -103,7 +103,7 @@ class Messaging:
             raise Exception('Not a valid time it should be in DD:MM:YYYY HH:MM format')
             return
         time = re.search(r'\d{4}-\d{2}-\d{2} ([0-1]?[0-9]|2[0-3]):[0-5][0-9]', time)
-        return requests.get(f'http://trans.smsfresh.co/api/schedulemsg.php?user={self.user}&pass={self.password}&sender={self.senderId}&phone={mobileNos}&text={message}&priority={priority}&stype={smstype}&time={time}')
+        return requests.get(f'http://trans.smsfresh.co/api/schedulemsg.php?user={self.user}&pass={self.password}&sender={self.senderId}&phone={mobileNos}&text={message}&priority={priority}&stype=normal&time={time}')
 
     def getBalance(self) -> int:
         """

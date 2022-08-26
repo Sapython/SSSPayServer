@@ -32,7 +32,7 @@ class Recharge:
         else:
             return {'error': 'Cannot fetch operators. Try again later'}, 400
 
-    def doRecharge(self,operatorNo:int,caNumber:int,amount:int,referenceId:int):
+    def doRecharge(self,operator:str,caNumber:int,amount:int,referenceId:int):
         """
         It takes in 4 parameters and returns a json response
         
@@ -47,13 +47,13 @@ class Recharge:
         :type referenceId: int
         :return: The response is a JSON object.
         """
-        payload = json.dumps({"operator": operatorNo,"canumber": caNumber,"amount": amount,"referenceid": referenceId})
+        payload = json.dumps({"operator": operator,"canumber": caNumber,"amount": amount,"referenceid": referenceId})
         response = requests.request(
             "POST", self.doRechargeUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
-            return {'error': response.json()['message']}, 400
+            return {'error': response.json()['message'],'response_code':response.json()['response_code']}
     
     def getStatusEnquiry(self,referenceId:str):
         """

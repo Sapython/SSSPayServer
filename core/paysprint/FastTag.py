@@ -1,4 +1,8 @@
 import json
+import base64
+import requests
+from core.authentication.encryption import Encrypt
+from core.authentication.paysprintAuth import PaySprintAuth
 class FastTag:
     def __init__(self,app):
         self.auth = PaySprintAuth(app)
@@ -11,7 +15,7 @@ class FastTag:
         response = requests.request(
             "POST", self.operatorListUrl, headers=self.auth.generatePaysprintAuthHeaders())
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()
         else:
             return {'error': 'Cannot fetch operators. Try again later'}, 400
 
@@ -23,25 +27,24 @@ class FastTag:
         response = requests.request(
             "POST", self.fetchConsumerDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()
         else:
-            return {'error': response.json()['message']}, 400
+            return response.json()
 
-    def recharge(self, operator: int, caNumber: str, amount: int, referenceId: str, latitude: str, longitude: str,billAmount:str,billNetAmount:str,dueDate:str,maxBillAmount:str,acceptPayment:bool,acceptPartPay:bool,cellNumber:str,userName:str):
-        payload = json.dumps({"operator": operator, "canumber": caNumber, "amount": amount, "referenceid": referenceId, "latitude": latitude, "longitude": longitude, "bill_fetch": {"billAmount": billAmount,     "billnetamount": billNetAmount,
-                             "dueDate": dueDate,     "maxBillAmount": maxBillAmount,     "acceptPayment": acceptPayment,     "acceptPartPay": acceptPartPay,     "cellNumber": cellNumber,     "userName": userName}})
+    def recharge(self, operator: int, caNumber: str, amount: int, referenceId: str, latitude: str, longitude: str,bill_fetch:dict):
+        payload = json.dumps({"operator": operator, "canumber": caNumber, "amount": amount, "referenceid": referenceId, "latitude": latitude, "longitude": longitude, "bill_fetch": bill_fetch})
         response = requests.request(
             "POST", self.rechargeUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()
         else:
-            return {'error': response.json()['message']}, 400
+            return response.json()
     
     def getFastTagStatus(self,referenceId:str):
         payload = json.dumps({"referenceId": referenceId})
         response = requests.request(
             "POST", self.getStatusURl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()
         else:
-            return {'error': response.json()['message']}, 400
+            return response.json()

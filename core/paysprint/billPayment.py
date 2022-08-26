@@ -29,9 +29,9 @@ class BillPayment:
         response = requests.request(
             "POST", self.operatorList, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()
         else:
-            return {'error': response.json()['message']}, 400
+            return response.json()
 
     def fetchBillDetails(self, operatorNo: int, caNumber: int, mode: str):
         """
@@ -47,17 +47,17 @@ class BillPayment:
         :return: a tuple.
         """
         if mode != 'online' and mode != 'offline':
-            return {'error': 'Invalid mode'}, 400
+            return {'error': 'Invalid mode'}
         payload = json.dumps(
             {"operator": operatorNo, "canumber": caNumber, "mode": mode})
         response = requests.request(
             "POST", self.fetchBillDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()
         else:
-            return {'error': response.json()['message']}, 400
+            return response.json()
 
-    def payBill(self, operatorNo: str, caNumber: str, amount: str, referenceNo: str, latitude: str, longitude: str, mode: str, billAmount: str, billNetAmount: str, billDate: str, dueDate: str, acceptPayment: bool, acceptPartPay: bool, cellNumber: str, userName: str):
+    def payBill(self, operatorNo: str, caNumber: str, amount: str, referenceNo: str, latitude: str, longitude: str, billFetched:dict):
         """
         I'm trying to send a POST request to a URL with a JSON payload
 
@@ -102,23 +102,14 @@ class BillPayment:
             "latitude": latitude,
             "longitude": longitude,
             "mode": "online",
-            "bill_fetch": {
-                "billAmount": billAmount,
-                "billnetamount": billNetAmount,
-                "billdate": billDate,
-                "dueDate": dueDate,
-                "acceptPayment": acceptPayment,
-                "acceptPartPay": acceptPartPay,
-                "cellNumber": cellNumber,
-                "userName": userName,
-            }
+            "bill_fetch": billFetched
         })
         response = requests.request(
             "POST", self.payBillUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json
+            return response.json()
         else:
-            return {'error': response.json()['message']}, 400
+            return response.json()
 
     def statusEnquiry(self, referenceId: str):
         """
@@ -131,7 +122,7 @@ class BillPayment:
         payload = json.dumps({"referenceid": referenceId})
         response = requests.request(
             "POST", self.statusEnquiryUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
-        if (response.json()['status'] == true and response.json()['data']['status'] == '1'):
-            return response.json
+        if (response.json()['status'] == True and response.json()['data']['status'] == '1'):
+            return response.json()
         else:
-            return {'error': response.json()['message']}, 400
+            return response.json()

@@ -1,50 +1,78 @@
 """
 A sample Hello World server.
 """
+import logging
 import os
+import sys
+import time
+from threading import Thread
 
 import firebase_admin
+import google.cloud.logging
 import requests
 from firebase_admin import auth, credentials
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_cors import CORS
 
 from core.authentication.auth import Authentication
-from core.paysprint.AEPS import AEPS
-
+from core.authentication.userManagement import UserManagement
+from core.helpers.Qr import QR
+from core.helpers.Transaction import Transaction
 from core.messaging.messaging import Messaging
-from core.paysprint.LPG import LPG
-from core.paysprint.Recharge import Recharge
-from core.paysprint.HLR import HLR
+from core.payment.payout.payout import Payout
+from core.payment.wallet.wallet import Wallet
+from core.paysprint.AEPS import AEPS
 from core.paysprint.billPayment import BillPayment
-from core.paysprint.LIC import LIC
 from core.paysprint.FastTag import FastTag
+from core.paysprint.HLR import HLR
+from core.paysprint.LIC import LIC
+from core.paysprint.LPG import LPG
+from core.paysprint.Onboarding import Onboarding
+from core.paysprint.Recharge import Recharge
+from core.paysprint.Upi import UPI
 
 cred = credentials.Certificate(
     "keys/ssspay-prod-firebase-adminsdk-ouiri-dffb470966.json")
+DEVELOPMENT = True
 firebase_admin.initialize_app(cred)
+client = google.cloud.logging.Client()
+client.setup_logging()
+
 # pylint: disable=C0103
 app = Flask(__name__)
 CORS(app)
-aeps = AEPS(app)
+aeps = AEPS(app,logging)
 authService = Authentication(auth, app)
 messaging = Messaging()
-LpgInstance = LPG(app)
+LpgInstance = LPG(app, DEVELOPMENT)
 DthInstance = Recharge(app)
-HlrInstance = HLR(app)
+HlrInstance = HLR(app, DEVELOPMENT)
 RechargeInstance = Recharge(app)
 BillPaymentInstance = BillPayment(app)
 LicInstance = LIC(app)
 FastTagInstance = FastTag(app)
+userManagement = UserManagement(auth, app)
+wallet = Wallet(app)
+payout = Payout(app)
+transactionInstance = Transaction(app, DEVELOPMENT)
+qr = QR(DEVELOPMENT)
+onboarding = Onboarding(app)
+upi = UPI(app)
+HLR_WORKING = False
+
 
 def authorize():
+    if DEVELOPMENT:
+        return DEVELOPMENT, 200
     if (request.is_json):
         try:
             return authService.verifyToken(request.json)
         except Exception as e:
+            logging.warning(e)
             return {'error': 'Invalid token'}, 400
     else:
-        return ({'error': 'No token'}, 400)
+        logging.warning('No token')
+        return {'error': 'No token'}, 400
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -56,15 +84,552 @@ def test():
     # get current IP
     service = os.environ.get('K_SERVICE', 'Unknown service')
     revision = os.environ.get('K_REVISION', 'Unknown revision')
-    return jsonify({"ip": requests.get('http://checkip.dyndns.org/').text, "service": service, "revision": revision})
+    return jsonify({"ip": requests.get('http://checkip.dyndns.org/').text, "service": service, "revision": revision, "version": 2, "development": DEVELOPMENT})
 
 
-@app.route('/favicon.ico', methods=['GET'])
+@app.route('/favicon.ico', methods=['POST'])
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+# Wallet Services
 
-@app.route('/sendSingleSMS', methods=['POST'])
+
+@app.route('/wallet/getBalance', methods=['POST'])
+def getBalance():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['uid'] is None):
+            return {'error': 'uid is required'}, 400
+        try:
+            print(request.json['uid'])
+            balance = wallet.get_balance(request.json['uid'])
+            if (balance > 0):
+                return {"balance": balance}
+            else:
+                return {"error": "No balance"}
+        except Exception as e:
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/wallet/addBalance', methods=['POST'])
+def addWalletBalance():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['uid'] is None):
+            return {'error': 'uid is required'}, 400
+        if (request.json['amount'] is None):
+            return {'error': 'amount is required'}, 400
+        try:
+            print(request.json['uid'])
+            wallet.add_balance(request.json['uid'], request.json['amount'])
+            return {"success": "Balance added successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/wallet/deductBalance', methods=['POST'])
+def deductWalletBalance():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['uid'] is None):
+            return {'error': 'uid is required'}, 400
+        if (request.json['amount'] is None):
+            return {'error': 'amount is required'}, 400
+        try:
+            print(request.json['uid'])
+            wallet.deduct_balance(request.json['uid'], request.json['amount'])
+            return {"success": "Balance deducted successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+# Payout services
+
+
+@app.route('/payout/createAccount', methods=['POST'])
+def createPayOutContact():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['uid'] is None):
+            return {'error': 'uid is required'}, 400
+        if (request.json['name'] is None):
+            return {'error': 'name is required'}, 400
+        if (request.json['email'] is None):
+            return {'error': 'email is required'}, 400
+        if (request.json['contact'] is None):
+            return {'error': 'contact is required'}, 400
+        try:
+            print(request.json['uid'])
+            payout.createAccount(request.json)
+            return {"success": "Account created successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/allAccounts', methods=['POST'])
+def getAllPayoutContacts():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            accounts = payout.getAllAccounts()
+            return {"accounts": accounts}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/getAccount', methods=['POST'])
+def getPayoutContact():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['accountId'] is None):
+            return {'error': 'accountId is required'}, 400
+        try:
+            account = payout.getAccount(request.json['accountId'])
+            return {"account": account}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/updateAccount', methods=['POST'])
+def updatePayoutContact():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['accountId'] is None):
+            return {'error': 'accountId is required'}, 400
+        if (request.json['name'] is None):
+            return {'error': 'name is required'}, 400
+        if (request.json['email'] is None):
+            return {'error': 'email is required'}, 400
+        if (request.json['contact'] is None):
+            return {'error': 'contact is required'}, 400
+        if (request.json['uid'] is None):
+            return {'error': 'uid is required'}, 400
+        try:
+            print(request.json)
+            payout.updateAccount(request.json)
+            return {"success": "Account updated successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/activateAccount', methods=['POST'])
+def activatePayoutContact():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['accountId'] is None):
+            return {'error': 'accountId is required'}, 400
+        try:
+            payout.activateAccount(request.json['accountId'])
+            return {"success": "Account activated successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/deactivateAccount', methods=['POST'])
+def deactivatePayoutContact():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['accountId'] is None):
+            return {'error': 'accountId is required'}, 400
+        try:
+            payout.deactivateAccount(request.json['accountId'])
+            return {"success": "Account deactivated successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/connectFundAccount', methods=['POST'])
+def connectFundAccount():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['accountId'] is None):
+            return {'error': 'accountId is required'}, 400
+        if (request.json['account_type'] is None):
+            return {'error': 'account_type is required'}, 400
+        if (request.json['account_type'] == "bank_account"):
+            if (request.json['bankAccountName'] is None):
+                return {'error': 'bankAccountName is required'}, 400
+            if (request.json['accountNumber'] is None):
+                return {'error': 'accountNumber is required'}, 400
+            if (request.json['ifsc'] is None):
+                return {'error': 'ifsc is required'}, 400
+        elif (request.json['account_type'] == "vpa"):
+            if (request.json['vpa'] is None):
+                return {'error': 'vpa is required'}, 400
+        elif (request.json['account_type'] == "card"):
+            if (request.json['cardNumber'] is None):
+                return {'error': 'cardNumber is required'}, 400
+            if (request.json['cardName'] is None):
+                return {'error': 'cardName is required'}, 400
+        else:
+            return {'error': "account_type is invalid"}, 400
+        try:
+            payout.connectFundAccount(request.json)
+            return {"success": "Account connected successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/getAllFundAccounts', methods=['POST'])
+def getAllFundAccounts():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            accounts = payout.getAllFundAccounts()
+            return {"accounts": accounts}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/getFundAccountById', methods=['POST'])
+def getFundAccountById():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['accountId'] is None):
+            return {'error': 'accountId is required'}, 400
+        try:
+            account = payout.getFundAccountById(request.json['accountId'])
+            return {"account": account}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/createPayout', methods=['POST'])
+def createPayout():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['account_number'] is None):
+            return {'error': 'account_number is required'}, 400
+        if (request.json['fund_account_id'] is None):
+            return {'error': 'fund_account_id is required'}, 400
+        if (request.json['amount'] is None):
+            return {'error': 'amount is required'}, 400
+        if (request.json['mode'] is None):
+            return {'error': 'mode is required'}, 400
+        if (request.json['referenceId'] is None):
+            return {'error': 'referenceId is required'}, 400
+        if (request.json['narration'] is None):
+            return {'error': 'narration is required'}, 400
+        if (request.json['uid'] is None):
+            return {'error': 'uid is required'}, 400
+        try:
+            payout.createPayout(request.json)
+            return {"success": "Payout created successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/getAllPayouts', methods=['POST'])
+def getAllPayouts():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            if (request.json['account_number'] is None):
+                return {'error': 'account_number is required'}, 400
+            payouts = payout.getAllPayouts(request.json['account_number'])
+            return {"payouts": payouts}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/getPayoutById', methods=['POST'])
+def getPayoutById():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['payout_id'] is None):
+            return {'error': 'payout_id is required'}, 400
+        try:
+            payout = payout.getPayoutById(request.json['payout_id'])
+            return {"payout": payout}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/cancelQueuedPayout', methods=['POST'])
+def cancelQueuedPayout():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        if (request.json['payout_id'] is None):
+            return {'error': 'payout_id is required'}, 400
+        try:
+            payout.cancelQueuedPayout(request.json['payout_id'])
+            return {"success": "Payout cancelled successfully"}
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/expressPayout', methods=['POST'])
+def expressPayout():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    transactionValue = transactionInstance.getTransaction(
+        request.json['uid'], request.json['transactionId'])
+    if (transactionValue == None):
+        return {'error': 'Transaction not found'}, 400
+    if (not transactionInstance.checkBalance(transactionValue['amount'], request.json['uid'])):
+        return {'error': 'Insufficient balance'}, 400
+
+    if (request.is_json):
+        if (transactionValue['extraData']['accountType'] is None):
+            return {'error': 'accountType is required'}, 400
+        if (transactionValue['extraData']['accountType'] == 'bank_account'):
+            if (transactionValue['extraData']['account']['bankAccountName'] is None):
+                return {'error': 'bankAccountName is required'}, 400
+            if (transactionValue['extraData']['account']['ifsc'] is None):
+                return {'error': 'ifsc is required'}, 400
+            if (transactionValue['extraData']['account']['accountNumber'] is None):
+                return {'error': 'accountNumber is required'}, 400
+        elif (transactionValue['extraData']['accountType'] == 'vpa'):
+            if (transactionValue['extraData']['account']['vpa'] is None):
+                return {'error': 'vpa is required'}, 400
+        elif (transactionValue['extraData']['accountType'] == 'card'):
+            if (transactionValue['extraData']['account']['cardNumber'] is None):
+                return {'error': 'cardNumber is required'}, 400
+            if (transactionValue['extraData']['account']['cardName'] is None):
+                return {'error': 'cardName is required'}, 400
+        else:
+            return {'error': 'Invalid accountType'}, 400
+        if (transactionValue['extraData']['account']['name'] is None):
+            return {'error': 'name is required'}, 400
+
+        if (transactionValue['extraData']['account']['email'] is None):
+            return {'error': 'email is required'}, 400
+
+        if (transactionValue['extraData']['account']['contact'] is None):
+            return {'error': 'contact is required'}, 400
+
+        if (request.json['uid'] is None):
+            return {'error': 'uid is required'}, 400
+
+        if (transactionValue['extraData']['customerId'] is None):
+            return {'error': 'customerId is required'}, 400
+
+        if (transactionValue['idempotencyKey'] is None):
+            return {'error': 'idempotencyKey is required'}, 400
+        transactionValue['referenceId'] = request.json['transactionId']
+        transactionValue['uid'] = request.json['uid']
+        try:
+            responseData = payout.quickPayout(
+                transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
+            print("ACTUAL RESPONSE", responseData)
+            if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
+                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                    transactionValue['extraData']['customerId']) + ' is pending. Transaction id of this transaction is '+str(request.json['transactionId'])
+                transactionInstance.pendingTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+            elif (responseData[0]['status'] == 'processed'):
+                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                    transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+                transactionInstance.completeTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+            elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
+                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                    transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+                transactionInstance.pendingTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                return {"success": "Payout created successfully"}
+            return responseData
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+
+@app.route('/payout/completeDailyPayout', methods=['POST'])
+def completeDailyPayout():
+    transactionValue = transactionInstance.getTransaction(
+        request.json['uid'], request.json['transactionId'])
+    if (transactionValue == None):
+        return {'error': 'Transaction not found'}, 400
+    if (not transactionInstance.checkBalance(transactionValue['amount'], request.json['uid'])):
+        return {'error': 'Insufficient balance'}, 400
+
+    if (request.is_json):
+        if (transactionValue['extraData']['accountType'] is None):
+            return {'error': 'accountType is required'}, 400
+        if (transactionValue['extraData']['accountType'] == 'bank_account'):
+            if (transactionValue['extraData']['account']['bankAccountName'] is None):
+                return {'error': 'bankAccountName is required'}, 400
+            if (transactionValue['extraData']['account']['ifsc'] is None):
+                return {'error': 'ifsc is required'}, 400
+            if (transactionValue['extraData']['account']['accountNumber'] is None):
+                return {'error': 'accountNumber is required'}, 400
+        elif (transactionValue['extraData']['accountType'] == 'vpa'):
+            if (transactionValue['extraData']['account']['vpa'] is None):
+                return {'error': 'vpa is required'}, 400
+        elif (transactionValue['extraData']['accountType'] == 'card'):
+            if (transactionValue['extraData']['account']['cardNumber'] is None):
+                return {'error': 'cardNumber is required'}, 400
+            if (transactionValue['extraData']['account']['cardName'] is None):
+                return {'error': 'cardName is required'}, 400
+        else:
+            return {'error': 'Invalid accountType'}, 400
+        if (transactionValue['extraData']['account']['name'] is None):
+            return {'error': 'name is required'}, 400
+
+        if (transactionValue['extraData']['account']['email'] is None):
+            return {'error': 'email is required'}, 400
+
+        if (transactionValue['extraData']['account']['contact'] is None):
+            return {'error': 'contact is required'}, 400
+
+        if (request.json['uid'] is None):
+            return {'error': 'uid is required'}, 400
+
+        if (transactionValue['extraData']['customerId'] is None):
+            return {'error': 'customerId is required'}, 400
+
+        if (transactionValue['idempotencyKey'] is None):
+            return {'error': 'idempotencyKey is required'}, 400
+        transactionValue['referenceId'] = request.json['transactionId']
+        transactionValue['uid'] = request.json['uid']
+        try:
+            responseData = payout.quickPayout(
+                transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
+            print("ACTUAL RESPONSE", responseData)
+            if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
+                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                    transactionValue['extraData']['customerId']) + ' is pending. Transaction id of this transaction is '+str(request.json['transactionId'])
+                transactionInstance.pendingTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+            elif (responseData[0]['status'] == 'processed'):
+                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                    transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+                transactionInstance.completeTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+            elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
+                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                    transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+                transactionInstance.pendingTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                return {"success": "Payout created successfully"}
+            return responseData
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return {'error': str(e)}, 400
+            return {'error': 'Invalid token'}, 400
+    else:
+        return {'error': "We didn't received your data in json format"}, 400
+
+# Messaging Services
+
+
+@app.route('/messaging/sendSingleSMS', methods=['POST'])
 def sendSingleSMS():
     auth = authorize()
     if(auth[1] != 200):
@@ -75,18 +640,20 @@ def sendSingleSMS():
             message = request.json['message']
             priority = request.json['priority']
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
         try:
             response = messaging.sendSingleSMS(message, phoneNo, priority)
             print(response.text)
             return jsonify({'success': response.text}), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/sendMultipleSMS', methods=['POST'])
+@app.route('/messaging/sendMultipleSMS', methods=['POST'])
 def sendMultipleSMS():
     auth = authorize()
     if(auth[1] != 200):
@@ -97,17 +664,19 @@ def sendMultipleSMS():
             message = request.json['message']
             priority = request.json['priority']
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
         try:
             response = messaging.sendMultiSMS(message, phoneNo, priority)
             return jsonify({'success': response.text}), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/scheduleSMS', methods=['POST'])
+@app.route('/messaging/scheduleSMS', methods=['POST'])
 def scheduleSMS():
     auth = authorize()
     if(auth[1] != 200):
@@ -119,18 +688,20 @@ def scheduleSMS():
             priority = request.json['priority']
             schedule = request.json['schedule']
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
         try:
             response = messaging.scheduleSMS(
                 message, phoneNo, schedule, priority)
             return jsonify({'success': response.text}), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/getSMSBalance', methods=['GET'])
+@app.route('/messaging/getSMSBalance', methods=['GET'])
 def getSMSBalance():
     auth = authorize()
     if(auth[1] != 200):
@@ -139,10 +710,11 @@ def getSMSBalance():
         response = messaging.getBalance()
         return jsonify({'success': response}), 200
     except Exception as e:
+        logging.error(e)
         return jsonify({'error': str(e)}), 400
 
 
-@app.route('/getMobileOperatorDetail', methods=['GET'])
+@app.route('/messaging/getMobileOperatorDetail', methods=['GET'])
 def getMobileOperatorDetail():
     auth = authorize()
     if(auth[1] != 200):
@@ -151,10 +723,13 @@ def getMobileOperatorDetail():
         response = messaging.getMobileOperatorDetail()
         return jsonify({'success': response}), 200
     except Exception as e:
+        logging.error(e)
         return jsonify({'error': str(e)}), 400
 
+# LPG services
 
-@app.route('/getLpgOperators', methods=['POST'])
+
+@app.route('/lpg/getLpgOperators', methods=['POST'])
 def getLpgOperatorList():
     auth = authorize()
     if(auth[1] != 200):
@@ -164,10 +739,11 @@ def getLpgOperatorList():
         response = LpgInstance.getOperatorList(mode='online')
         return jsonify(response), 200
     except Exception as e:
+        logging.error(e)
         return jsonify({'error': str(e)}), 400
 
 
-@app.route('/fetchLpgDetails', methods=['POST'])
+@app.route('/lpg/fetchLpgDetails', methods=['POST'])
 def fetchLpgDetails():
     auth = authorize()
     if(auth[1] != 200):
@@ -177,46 +753,59 @@ def fetchLpgDetails():
             caNumber = request.json['customerNumber']
             operatorNo = request.json['operatorNumber']
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': "Please provide a customerNumber and operatorNumber ", "mainError": str(e)}), 400
         try:
             response = LpgInstance.fetchLpgDetails(caNumber, operatorNo)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/lpgRecharge', methods=['POST'])
+@app.route('/lpg/lpgRecharge', methods=['POST'])
 def rechargeLpg():
     auth = authorize()
     if(auth[1] != 200):
         return jsonify(auth[0]), auth[1]
     if (request.is_json):
+        transaction = transactionInstance.getTransaction(
+            request.json['uid'], request.json['transactionId'])
+        print("Transaction ", transaction)
         try:
-            caNumber = request.json['customerNumber']
-            operatorNo = request.json['operatorNumber']
-            amount = request.json['amount']
-            ad1 = request.json['ad1']
-            ad2 = request.json['ad2']
-            ad3 = request.json['ad3']
-            referenceId = request.json['referenceId']
-            latitude = request.json['latitude']
-            longitude = request.json['longitude']
-        except:
-            return {'error': "Please provide a customerNumber, operatorNumber, amount, ad1, ad2, ad3, referenceId, latitude and longitude "}, 400
+            caNumber = transaction['extraData']['customerNumber']
+            operatorNo = transaction['extraData']['operator']
+            amount = transaction['amount']
+            referenceId = request.json['transactionId']
+            latitude = transaction['extraData']['latitude']
+            longitude = transaction['extraData']['longitude']
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                print("Error ", e)
+                return jsonify({"mainError": str(e)}), 400
+            return {'error': "Please provide a customerNumber, operatorNumber, referenceId, latitude and longitude "}, 400
         try:
-            response = LpgInstance.rechargeLpg(
-                caNumber, operatorNo, amount, ad1, ad2, ad3, referenceId, latitude, longitude)
+            response = LpgInstance.rechargeLpg(caNumber, operatorNo, amount, referenceId,
+                                               latitude, longitude, transaction['extraData']['fields'], transaction['extraData'])
+            if (response['status'] == True and response['response_code'] == 1):
+                print("status", True,)
+                message = 'LPG payment of amount '+str(amount)+' for ' + str(caNumber) + ' for operator ' + str(
+                    operatorNo) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.completeTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'lpg', response)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
 
     else:
         return {'error': "We didn't received your data in json format "}, 400
 
 
-@app.route('/lpgStatusInquiry', methods=['POST'])
+@app.route('/lpg/lpgStatusInquiry', methods=['POST'])
 def LpgStatusInquiry():
     auth = authorize()
     if(auth[1] != 200):
@@ -230,50 +819,89 @@ def LpgStatusInquiry():
             response = LpgInstance.getLpgRechargeStatus(referenceId)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
+# HLR services
 
-@app.route('/getCustomerInfo', methods=['POST'])
+
+@app.route('/hlr/getCustomerInfo', methods=['POST'])
 def getCustomerInfo():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             number = request.json['number']
             opType = request.json['type']
             response = HlrInstance.getOperator(number, opType)
-            return jsonify(response), 200
+            return response
         except Exception as e:
-            return jsonify({'error': str(e)}), 400
+            logging.error(e)
+            if DEVELOPMENT:
+                print(e)
+                return jsonify({'error': str(e)}), 400
+            return jsonify({'error': 'Some error occurred from server side'}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/getDthInfo', methods=['POST'])
+@app.route('/hlr/getDthInfo', methods=['POST', 'GET'])
 def getDthInfo():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    return jsonify({
+        "status": True,
+        "response_code": 1,
+        "info": [
+            {
+                "Balance": 461.44,
+                "customerName": "Gaurav Singh",
+                "NextRechargeDate": "01 Jun 2021",
+                "status": "Active",
+                "planname": "Network Fee 0 to 200 Chs Mar20 - Rs 153.4,  End Date: NA,FTA Promo Dec18 Pack - Rs 0.0,  End Date: 17 Mar 2019,Zee Cinema HD - Rs 22.42,  End Date: 12 Apr 2020,India News Uttar Pradesh Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Gulistan News Jun17 - Rs 0.0,  End Date: 26 Apr 2020,Manoranjan TV Jul19 - Rs 0.0,  End Date: 26 Apr 2020,Investigation Discovery Jan20 - Rs 1.18,  End Date: 26 Apr 2020,Zee News Sep16 - Rs 0.12,  End Date: 21 Apr 2020,Star Plus HD - Rs 22.42,  End Date: 16 Sep 2020,Colors HD - Rs 22.42,  End Date: 15 Mar 2020,Rev2 Hungama - Rs 7.08,  End Date: 02 Apr 2020,Rev UTV Movies - Rs 2.36,  End Date: 16 Apr 2020,Star Gold Select HD Dec16 - Rs 11.8,  End Date: 26 Apr 2020,Cartoon Network HD Plus Nov18 - Rs 11.8,  End Date: 26 Apr 2020,AndTV HD - Rs 22.42,  End Date: 04 Sep 2020,Sony Ten 1 HD Sep16 - Rs 22.42,  End Date: NA,Rev Cartoon Network - Rs 5.02,  End Date: NA,Rev Pogo - Rs 5.02,  End Date: NA,Max HD - Rs 20.06,  End Date: NA,Sony Yay Apr17 - Rs 2.36,  End Date: NA,FTA Complimentary Feb19 Pack - Rs 0.0,  End Date: 26 May 2019,ANDPictures HD - Rs 22.42,  End Date: 24 Apr 2020,CNBC Awaaz - Rs 1.18,  End Date: NA,SET HD - Rs 22.42,  End Date: 07 Sep 2020,Colors Cineplex Feb17 - Rs 3.54,  End Date: 06 Apr 2020,9X Jalwa Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Arihant Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Colors Rishtey Jun20 - Rs 1.18,  End Date: 14 Jul 2020,Zee Bollywood - Rs 2.36,  End Date: NA,Rev Zee Cinema - Rs 17.7,  End Date: 14 Apr 2020,Rev NDTV India - Rs 1.18,  End Date: 03 Apr 2020,Star Sports 2 HD - Rs 22.42,  End Date: 12 Apr 2020,Star Sports 1 Sep16 - Rs 22.42,  End Date: 06 Jan 2020,Aastha Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Rev Zee TV - Rs 22.42,  End Date: 25 Apr 2020,Vedic Aug17 - Rs 0.0,  End Date: 26 Apr 2020,Paras TV Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Bansal News Apr18 - Rs 0.0,  End Date: 26 Apr 2020,Zee TV HD - Rs 22.42,  End Date: 15 Mar 2020,Cricket Hindi HD TS Dec18 Pack - Rs 42.48,  End Date: 08 Dec 2019,Rev UTV Action - Rs 2.36,  End Date: 27 Apr 2020,Disney HD Dec18 Bouquet - Rs 9.44,  End Date: 26 Apr 2020,SHALOM TV Sep16 - Rs 0.0,  End Date: 26 Apr 2020,India News Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Star Gold HD - Rs 11.8,  End Date: 14 Apr 2020,Zing - Rs 0.12,  End Date: 18 Apr 2020,Star Gold 2 Feb 20 - Rs 1.18,  End Date: NA,Lord Buddha TV Apr17 - Rs 0.0,  End Date: 26 Apr 2020,MH1 News Sep16 - Rs 0.0,  End Date: 26 Apr 2020,DD News HD Jan19 - Rs 0.0,  End Date: 26 Apr 2020,India News MP CH Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Sony SIX HD - Rs 22.42,  End Date: NA,",
+                "MonthlyRecharge": 578
+            }
+        ],
+        "message": "Fetch Successful"
+    }), 200
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
-            number = request.json['caNumber']
-            opType = request.json['operator']
+            # number = request.json['caNumber']
+            # opType = request.json['operator']
+            return jsonify({
+                "status": True,
+                "response_code": 1,
+                "info": [
+                    {
+                        "Balance": 461.44,
+                        "customerName": "Gaurav Singh",
+                        "NextRechargeDate": "01 Jun 2021",
+                        "status": "Active",
+                        "planname": "Network Fee 0 to 200 Chs Mar20 - Rs 153.4,  End Date: NA,FTA Promo Dec18 Pack - Rs 0.0,  End Date: 17 Mar 2019,Zee Cinema HD - Rs 22.42,  End Date: 12 Apr 2020,India News Uttar Pradesh Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Gulistan News Jun17 - Rs 0.0,  End Date: 26 Apr 2020,Manoranjan TV Jul19 - Rs 0.0,  End Date: 26 Apr 2020,Investigation Discovery Jan20 - Rs 1.18,  End Date: 26 Apr 2020,Zee News Sep16 - Rs 0.12,  End Date: 21 Apr 2020,Star Plus HD - Rs 22.42,  End Date: 16 Sep 2020,Colors HD - Rs 22.42,  End Date: 15 Mar 2020,Rev2 Hungama - Rs 7.08,  End Date: 02 Apr 2020,Rev UTV Movies - Rs 2.36,  End Date: 16 Apr 2020,Star Gold Select HD Dec16 - Rs 11.8,  End Date: 26 Apr 2020,Cartoon Network HD Plus Nov18 - Rs 11.8,  End Date: 26 Apr 2020,AndTV HD - Rs 22.42,  End Date: 04 Sep 2020,Sony Ten 1 HD Sep16 - Rs 22.42,  End Date: NA,Rev Cartoon Network - Rs 5.02,  End Date: NA,Rev Pogo - Rs 5.02,  End Date: NA,Max HD - Rs 20.06,  End Date: NA,Sony Yay Apr17 - Rs 2.36,  End Date: NA,FTA Complimentary Feb19 Pack - Rs 0.0,  End Date: 26 May 2019,ANDPictures HD - Rs 22.42,  End Date: 24 Apr 2020,CNBC Awaaz - Rs 1.18,  End Date: NA,SET HD - Rs 22.42,  End Date: 07 Sep 2020,Colors Cineplex Feb17 - Rs 3.54,  End Date: 06 Apr 2020,9X Jalwa Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Arihant Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Colors Rishtey Jun20 - Rs 1.18,  End Date: 14 Jul 2020,Zee Bollywood - Rs 2.36,  End Date: NA,Rev Zee Cinema - Rs 17.7,  End Date: 14 Apr 2020,Rev NDTV India - Rs 1.18,  End Date: 03 Apr 2020,Star Sports 2 HD - Rs 22.42,  End Date: 12 Apr 2020,Star Sports 1 Sep16 - Rs 22.42,  End Date: 06 Jan 2020,Aastha Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Rev Zee TV - Rs 22.42,  End Date: 25 Apr 2020,Vedic Aug17 - Rs 0.0,  End Date: 26 Apr 2020,Paras TV Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Bansal News Apr18 - Rs 0.0,  End Date: 26 Apr 2020,Zee TV HD - Rs 22.42,  End Date: 15 Mar 2020,Cricket Hindi HD TS Dec18 Pack - Rs 42.48,  End Date: 08 Dec 2019,Rev UTV Action - Rs 2.36,  End Date: 27 Apr 2020,Disney HD Dec18 Bouquet - Rs 9.44,  End Date: 26 Apr 2020,SHALOM TV Sep16 - Rs 0.0,  End Date: 26 Apr 2020,India News Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Star Gold HD - Rs 11.8,  End Date: 14 Apr 2020,Zing - Rs 0.12,  End Date: 18 Apr 2020,Star Gold 2 Feb 20 - Rs 1.18,  End Date: NA,Lord Buddha TV Apr17 - Rs 0.0,  End Date: 26 Apr 2020,MH1 News Sep16 - Rs 0.0,  End Date: 26 Apr 2020,DD News HD Jan19 - Rs 0.0,  End Date: 26 Apr 2020,India News MP CH Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Sony SIX HD - Rs 22.42,  End Date: NA,",
+                        "MonthlyRecharge": 578
+                    }
+                ],
+                "message": "Fetch Successful"
+            }), 200
             response = HlrInstance.getDthInfo(number, opType)
+            print("dth response", response)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/getMobilePlan', methods=['POST'])
+@app.route('/hlr/getMobilePlan', methods=['POST'])
 def getMobilePlan():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             circle = request.json['circle']
@@ -281,281 +909,844 @@ def getMobilePlan():
             response = HlrInstance.getPlanInfo(circle, operator)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
+# Recharge Services
 
-@app.route('/getOperatorsList', methods=['POST'])
+
+@app.route('/recharge/getOperatorsList', methods=['POST'])
 def getOperatorsList():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    # return False
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     try:
         response = RechargeInstance.getOperatorList()
         return jsonify(response), 200
     except Exception as e:
+        logging.error(e)
         return jsonify({'error': str(e)}), 400
 
 
-@app.route('/doRecharge', methods=['POST'])
+@app.route('/recharge/doRecharge', methods=['POST'])
 def getOperatorInfo():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
-            operator = request.json['operator']
-            caNumber = request.json['canumber']
-            amount = request.json['amount']
-            referenceId = request.json['referenceid']
+            transactionData = transactionInstance.getTransaction(
+                request.json['uid'], request.json['transactionId'])
+            print("transactionData", transactionData)
+            operator = transactionData['extraData']['operator']
+            if not operator:
+                return jsonify({'error': "Please provide operator"}), 400
+            caNumber = int(transactionData['extraData']['caNumber'])
+            if not caNumber:
+                return jsonify({'error': "Please provide caNumber"}), 400
+            amount = transactionData['amount']
+            if not amount:
+                return jsonify({'error': "Please provide amount"}), 400
+            referenceId = request.json['transactionId']
+            if not referenceId:
+                return jsonify({'error': "Please provide referenceId"}), 400
             response = RechargeInstance.doRecharge(
                 operator, caNumber, amount, referenceId)
+            print("repsonse", response)
+            startTime = time.time()
+            print(time.time())
+            if (response['status'] == True and response['response_code'] == 1):
+                print("status", True,)
+                message = 'Recharge of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.completeTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'recharge', response)
+            print("recharge response", response,
+                  time.time() - startTime, time.time(), 'Time')
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/statusEnquiry', methods=['POST'])
+@app.route('/recharge/statusEnquiry', methods=['POST'])
 def statusEnquiry():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             referenceId = request.json['referenceid']
             response = RechargeInstance.getStatusEnquiry(referenceId)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/getBillOperators', methods=['POST'])
+# BillPayment services
+
+
+@app.route('/billPayment/getBillOperators', methods=['POST'])
 def getBillOperators():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    print("auth", auth)
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             response = BillPaymentInstance.getOperatorList('online')
+            print("response", response)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/fetchBill', methods=['POST'])
+@app.route('/billPayment/fetchBill', methods=['POST'])
 def fetchBill():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
+            print(request.json)
             operatorNo = request.json['operator']
             caNumber = request.json['canumber']
             mode = request.json['mode']
             response = BillPaymentInstance.fetchBillDetails(
                 operatorNo, caNumber, mode)
+            print(response)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/payBill', methods=['POST'])
+@app.route('/billPayment/payBill', methods=['POST'])
 def payBill():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
-            operatorNo = request.json['operator']
-            caNumber = request.json['caNumber']
-            amount = request.json['amount']
-            referenceId = request.json['referenceId']
-            latitude = request.json['latitude']
-            longitude = request.json['longitude']
-            mode = request.json['mode']
-            billAmount = request.json['billAmount']
-            billNetAmount = request.json['billNetAmount']
-            billDate = request.json['billDate']
-            dueDate = request.json['dueDate']
-            acceptPayment = request.json['acceptPayment']
-            acceptPartPay = request.json['acceptPartpay']
-            cellNumber = request.json['cellNumber']
-            userName = request.json['username']
-            response = BillPaymentInstance.payBill(operatorNo, caNumber, amount, referenceId, latitude, longitude,
-                                                   mode, billAmount, billNetAmount, billDate, dueDate, acceptPayment, acceptPartPay, cellNumber, userName)
+            transaction = transactionInstance.getTransaction(
+                request.json['uid'], request.json['transactionId'])
+            print("transaction", transaction)
+            operatorNo = int(transaction['extraData']['operator']['id'])
+            caNumber = transaction['extraData']['fields']['mainField']
+            amount = transaction['amount']
+            referenceId = request.json['transactionId']
+            latitude = transaction['extraData']['latitude']
+            longitude = transaction['extraData']['longitude']
+            fetchedBill = transaction['extraData']['bill']['bill_fetch']
+            response = BillPaymentInstance.payBill(
+                operatorNo, caNumber, amount, referenceId, latitude, longitude, fetchedBill)
+            print("response", response)
+            if (response['status'] == True and response['response_code'] == 1):
+                message = 'Bill payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.completeTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'bbps', response)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/billStatusEnquiry')
+@app.route('/billPayment/billStatusEnquiry')
 def billStatusEnquiry():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             referenceId = request.json['referenceid']
             response = BillPaymentInstance.statusEnquiry(referenceId)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
-@app.route('/fetchLicBill')
+# LIC services
+
+
+@app.route('/lic/fetchLicBill', methods=['POST'])
 def fetchLicBill():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             caNumber = request.json['caNumber']
             email = request.json['email']
-            mode = request.json['mode']
+            mode = 'online'
             response = LicInstance.fetchLicBill(caNumber, email, mode)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
-@app.route('/payLicBill')
+
+@app.route('/lic/payLicBill', methods=['POST'])
 def payLicBill():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
-            caNumber = request.json['caNumber']
-            amount = request.json['amount']
-            email = request.json['email']
-            latitude = request.json['latitude']
-            longitude = request.json['longitude']
-            mode = request.json['mode']
-            policyNumber1 = request.json['policyNumber1']
-            policyNumber2 = request.json['policyNumber2']
-            referenceId = request.json['referenceId']
-            billNo = request.json['billNo']
-            billAmount = request.json['billAmount']
-            billNetAmount = request.json['billNetAmount']
-            billDate = request.json['billDate']
-            dueFrom = request.json['dueFrom']
-            dueTo = request.json['dueTo']
-            validationId = request.json['validationId']
-            billId = request.json['billId']
-            acceptPayment = request.json['acceptPayment']
-            acceptPartPay = request.json['acceptPartpay']
-            cellNumber = request.json['cellNumber']
-            userName = request.json['username']
-            response = LicInstance.payLicBill(caNumber, mode, amount, email, policyNumber1, policyNumber2, referenceId, latitude, longitude,
-                                                   billNo, billAmount, billNetAmount, billDate,acceptPayment, acceptPartPay, cellNumber, dueFrom, dueTo, validationId,billId)
+            transaction = transactionInstance.getTransaction(
+                request.json['uid'], request.json['transactionId'])
+            caNumber = transaction['extraData']['formData']['caNumber']
+            amount = float(transaction['amount'])
+            email = transaction['extraData']['formData']['email']
+            latitude = transaction['extraData']['latitude']
+            longitude = transaction['extraData']['longitude']
+            mode = 'online'
+            referenceId = request.json['transactionId']
+            billFetch = transaction['extraData']['bill']
+            response = LicInstance.payLicBill(
+                caNumber, mode, amount, email, referenceId, latitude, longitude, billFetch)
+            print(response)
+            if (response['status'] == True and response['response_code'] == 1):
+                message = 'Lic payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.completeTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'lic', response)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
+            print(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
-@app.route('/getLicStatus')
+
+@app.route('/lic/getLicStatus', methods=['POST'])
 def LicStatus():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             referenceId = request.json['referenceid']
             response = LicInstance.getLicStatus(referenceId)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
-@app.route('/getFastTagOperatorList')
+# FastTag services
+
+
+@app.route('/fastTag/getFastTagOperatorList', methods=['POST'])
 def getFastTagOperatorList():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             response = FastTagInstance.getOperatorsList()
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
-@app.route('/fastTagDetails')
+
+@app.route('/fastTag/fastTagDetails', methods=['POST'])
 def fastTagDetails():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
+
         try:
             operatorNo = request.json['operator']
             caNumber = request.json['caNumber']
-            response = FastTagInstance.fetchConsumerDetails(operatorNo, caNumber)
+            response = FastTagInstance.fetchConsumerDetails(
+                operatorNo, caNumber)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
-@app.route('/rechargeFastTag')
+
+@app.route('/fastTag/rechargeFastTag', methods=['POST'])
 def rechargeFastTag():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
+        print(request.json)
+        transaction = transactionInstance.getTransaction(
+            request.json['uid'], request.json['transactionId'])
+        print("TRANSACTION ", transaction)
         try:
-            operatorNo = request.json['operator']
-            caNumber = request.json['caNumber']
-            amount = request.json['amount']
-            latitude = request.json['latitude']
-            longitude = request.json['longitude']
-            mode = request.json['mode']
-            referenceId = request.json['referenceId']
-            cellNumber = request.json['cellNumber']
-            userName = request.json['username']
-            billAmount = request.json['billAmount']
-            billNetAmount = request.json['billNetAmount']
-            dueDate = request.json['dueDate']
-            maxBillAmount = request.json['maxBillAmount']
-            acceptPayment = request.json['acceptPayment']
-            acceptPartPay = request.json['acceptPartPay']
-            cellNumber = request.json['cellNumber']
-            userName = request.json['username']
-            response = FastTagInstance.recharge(operatorNo, caNumber, amount, referenceId, latitude, longitude, billAmount, billNetAmount, dueData, maxBillAmount, acceptPayment, acceptPartPay, cellNumber, userName)
+            operatorNo = int(transaction['extraData']['bank']['id'])
+            caNumber = transaction['extraData']['caNumber']
+            amount = transaction['amount']
+            latitude = transaction['extraData']['latitude']
+            longitude = transaction['extraData']['longitude']
+            referenceId = request.json['transactionId']
+            bill_fetch = transaction['extraData']['bill_fetch']
+            response = FastTagInstance.recharge(
+                operatorNo, caNumber, amount, referenceId, latitude, longitude, bill_fetch)
+            print(response)
+            if (response['status'] == True and response['response_code'] == 1):
+                message = 'FastTag payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.completeTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
 
-@app.route('/getFastTagStatus')
+
+@app.route('/fastTag/getFastTagStatus', methods=['POST'])
 def getFastTagStatus():
-    # auth = authorize()
-    # if(auth[1]!=200):
-    #     return jsonify(auth[0]), auth[1]
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             referenceId = request.json['referenceid']
             response = FastTagInstance.getFastTagStatus(referenceId)
             return jsonify(response), 200
         except Exception as e:
+            logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
+# UTM services
+
+
+@app.route('/digitalAccount/getAccountReferralLink', methods=['POST'])
+def getAccountReferralLink():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    try:
+        response = HlrInstance.getUTMAccountLInk()
+        print(response)
+        return jsonify(response), 200
+    except Exception as e:
+        logging.error(e)
+        return jsonify({'error': str(e)}), 400
+
+# Admin Services
+
+
+@app.route('/admin/blockUser', methods=['POST'])
+def blockUser():
+    print(request.json)
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            statement = userManagement.blockUser(
+                request.json, request.json['blockID'])
+            print(statement)
+            return statement
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return jsonify({'error': str(e)}), 400
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/admin/unblockUser', methods=['POST'])
+def unblockUser():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            return userManagement.unblockUser(request.json['uid'], request.json['blockID'])
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return jsonify({'error': str(e)}), 400
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/admin/deleteUser', methods=['POST'])
+def deleteUser():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (request.is_json):
+        try:
+            userName = request.json
+            return userManagement.deleteUser(request.json['uid'], request.json['deleteUserId'])
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return jsonify({'error': str(e)}), 400
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/admin/changeAccess', methods=['POST'])
+def changeAccess():
+    print("ISJSON", request.is_json, request.json)
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    else:
+        print('Authorization passed')
+    if (request.is_json):
+        try:
+            statement = userManagement.changeAccess(
+                request.json['changeAccessLevel'], request.json['changeUserId'], request.json['uid'])
+            print("statement", statement)
+            return statement
+        except Exception as e:
+            logging.error(e)
+            if DEVELOPMENT:
+                return jsonify({'error': str(e)}), 400
+            return jsonify({'error': "An error occurred "}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/admin/createUser', methods=['POST'])
+def createUser():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if request.is_json:
+        try:
+            print(request.json)
+            return userManagement.createUser(request.json)
+        except Exception as e:
+            logging.error(e)
+            print(e)
+            if DEVELOPMENT:
+                return jsonify({'error': str(e)}), 400
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/admin/getTransactions', methods=['POST'])
+def getTransactions():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if request.is_json:
+        try:
+            print(request.json)
+            return transactionInstance.getTransactions(request.json['type'], request.json['startDate'], request.json['endDate'])
+        except Exception as e:
+            logging.error(e)
+            print(e)
+            if DEVELOPMENT:
+                return jsonify({'error': str(e)}), 400
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+    else:
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+# Aeps Services
+
+
+@app.route('/aeps/bankList', methods=['POST'])
+def getAepsBankList():
+    # print(request.is_json,request.json)
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (not request.is_json):
+        return {'error': "We didn't received your data in json format "}, 400
+    try:
+        response = aeps.getBankList()
+        # print(response,response.text)
+        if (response.json()['response_code'] == 1):
+            return response.json(), 200
+        else:
+            if DEVELOPMENT:
+                return jsonify({'error': response.json()['message']}), 400
+            return jsonify({'error': "Cannot fetch bank list."}), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        else:
+            return jsonify({'error': "Some error occurred"}), 400
+
+
+@app.route('/aeps/balanceEnquiry', methods=['POST'])
+def getAepsBalanceEnquiry():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (not request.is_json):
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+    try:
+        requestData = request.json
+        mainTransactionData = transactionInstance.getTransaction(
+            requestData['uid'], requestData['transactionId'])['extraData']
+        transactionData = mainTransactionData['aepsData']
+        transactionData['data'] = transactionData['data'].replace('{PID=', '')
+        transactionData['data'] = transactionData['data'].replace('}', '')
+        response = aeps.getBalanceEnquiry(
+            transactionData['latitude'],
+            transactionData['longitude'],
+            transactionData['mobile_number'],
+            transactionData['referenceNo'],
+            transactionData['adhaarNumber'],
+            transactionData['nationalBankIdentification'],
+            transactionData['requestRemarks'],
+            transactionData['data'].strip(),
+            transactionData['is_iris'],
+            mainTransactionData['merchantCode']
+        )
+        print(response)
+        logging.info(response)
+        if (response[0]['response_code'] == 1 and response[1] == 200):
+            message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
+            return response
+        else:
+            logging.error(response[0])
+            if DEVELOPMENT:
+                return jsonify({'error': response[0]['message']}), 400
+            return jsonify({'error': "An error occurred"}), 400
+    except Exception as e:
+        logging.error(e)
+        print(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        else:
+            return jsonify({'error': "Some error occurred"}), 400
+
+
+@app.route('/aeps/cashWithDrawl', methods=['POST'])
+def getAepsCashWithDrawl():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (not request.is_json):
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+    try:
+        jsonData = request.json
+        mainTransactionData = transactionInstance.getTransaction(
+            jsonData['uid'], jsonData['transactionId'])['extraData']
+        transactionData = mainTransactionData['aepsData']
+        transactionData['data'] = transactionData['data'].replace('{PID=', '')
+        transactionData['data'] = transactionData['data'].replace('}', '')
+        response = aeps.withdrawCash(
+            transactionData['latitude'],
+            transactionData['longitude'],
+            transactionData['mobile_number'],
+            transactionData['referenceNo'],
+            transactionData['adhaarNumber'],
+            transactionData['nationalBankIdentification'],
+            transactionData['requestRemarks'],
+            transactionData['data'],
+            transactionData['amount'],
+            transactionData['is_iris'],
+            mainTransactionData['merchantCode']
+        )
+        print(response[0])
+        logging.info(response)
+        if (response[0]['response_code'] == 1 and response[1] == 200):
+            message = 'Cash Withdrawal for  ' + str(response[0]['clientrefno']) + ' of ' + str(transactionData['amount']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
+            return response
+        else:
+            logging.error(response)
+            if DEVELOPMENT:
+                return jsonify({'error': response[0]['message']}), 400
+            return jsonify({'error': "An error occurred"}), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/aeps/miniStatement', methods=['POST'])
+def miniStatement():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (not request.is_json):
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+    try:
+        jsonData = request.json
+        mainTransactionData = transactionInstance.getTransaction(
+            jsonData['uid'], jsonData['transactionId'])['extraData']
+        transactionData = mainTransactionData['aepsData']
+        transactionData['data'] = transactionData['data'].replace('{PID=', '')
+        transactionData['data'] = transactionData['data'].replace('}', '')
+        response = aeps.getMiniStatement(
+                transactionData['latitude'],
+            transactionData['longitude'],
+            transactionData['mobile_number'],
+            transactionData['referenceNo'],
+            transactionData['adhaarNumber'],
+            transactionData['nationalBankIdentification'],
+            transactionData['requestRemarks'],
+            transactionData['data'],
+            transactionData['is_iris'],
+            mainTransactionData['merchantCode']
+        )
+        print(response)
+        logging.info(response)
+        if (response[0]['response_code'] == 1 and response[1] == 200):
+            message = 'Balance Enquiry is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+            return response
+        else:
+            if DEVELOPMENT:
+                return jsonify({'error': response[0]['message']}), 400
+            return jsonify({'error': "An error occurred"}), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/aeps/getWithdrawStatus', methods=['POST'])
+def getWithdrawStatus():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (not request.is_json):
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+    try:
+        jsonData = request.json
+        response = aeps.getCashWithdrawStatus(jsonData['referenceNo'])
+        print(response)
+        if (response[1] == 200 and response[0]['response_code'] == 1):
+            logging.info(response)
+            return response
+        else:
+            logging.error(response[0])
+            if DEVELOPMENT:
+                return jsonify({'error': response[0]['message']}), 400
+            return jsonify({'error': "An error occurred"}), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/aeps/withdrawThreeWay', methods=['POST'])
+def withdrawThreeWay():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (not request.is_json):
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+    try:
+        jsonData = request.json
+        response = aeps.withdrawThreeWay(
+            jsonData['reference'], jsonData['status'])
+        print(response)
+        if (response[0]['response_code'] == 1 and response[1] == 200):
+            logging.info(response)
+            return response
+        else:
+            logging.error(response)
+            if DEVELOPMENT:
+                return jsonify({'error': response[0]['message']}), 400
+            return jsonify({'error': "An error occurred"}), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/aeps/aadhaarPay', methods=['POST'])
+def aadhaarPay():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (not request.is_json):
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+    try:
+        jsonData = request.json
+        response = aeps.aadhaarPay(
+            jsonData['latitude'],
+            jsonData['longitude'],
+            jsonData['mobile_number'],
+            jsonData['referenceNo'],
+            jsonData['ipaddress'],
+            jsonData['adhaarNumber'],
+            jsonData['nationalBankIdentification'],
+            jsonData['requestRemarks'],
+            jsonData['authData'],
+            jsonData['pipe'],
+            jsonData['amount'],
+            jsonData['transactionType'],
+            jsonData['is_iris']
+        )
+        print(response)
+        if (response[0]['response_code'] == 1):
+            return response, 200
+        else:
+            if DEVELOPMENT:
+                return jsonify({'error': response[0]['message']}), 400
+            return jsonify({'error': "An error occurred"}), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/aeps/aadhaarPayStatus', methods=['POST'])
+def aadhaarPayStatus():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    if (not request.is_json):
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+    try:
+        jsonData = request.json
+        response = aeps.aadhaarPayStatus(jsonData['referenceId'])
+        print(response)
+        if (response[0]['response_code'] == 1 and response[1] == 200):
+            return response
+        else:
+            logging.error(response)
+            if DEVELOPMENT:
+                return jsonify({'error': response.json()['message']}), 400
+            return jsonify({'error': "An error occurred"}), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/qr/registerQr', methods=['POST'])
+def registerQr():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    try:
+        response = qr.generateQr(
+            request.json['storeName'], request.json['uid'])
+        print(response, response.text)
+        return response.json(), 200
+        # if (response.json()['response_code'] == 1):
+        # else:
+        #     if DEVELOPMENT:
+        #         return jsonify({'error': response.json()['message']}), 400
+        #     return jsonify({'error': "An error occurred"}), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/onboarding/setup', methods=['POST'])
+def onboardingSetup():
+    print(request)
+    print(request.json)
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    try:
+        if (not request.is_json):
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+        getUser = transactionInstance.getUser(request.json['uid'])
+        print(getUser)
+        response = onboarding.onboardingWeb(
+            getUser['userId'],
+            getUser['phoneNumber'],
+            0,
+            getUser['email'],
+            request.json['uid'],
+        )
+        print(response)
+        return response, 200
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "Some error occurred"}), 400
+
+
+@app.route('/onboarding/callback', methods=['POST'])
+def onboardingCallback():
+    return {"status": 200, "message": "Transaction completed successfully"}
+    # auth = authorize()
+    # if(auth[1] != 200):
+    #     return jsonify(auth[0]), auth[1]
+    # try:
+    #     if (request.view_args['data']):
+    #         response = onboarding.decodeCallbackData(request.view_args['data'])
+    #         print(response)
+    #         return response
+    # except Exception as e:
+    # logging.error(e)
+    #     if DEVELOPMENT:
+    #         return jsonify({'error': e}), 400
+    #     return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/upi/createPayment', methods=['POST'])
+def createPayment():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    try:
+        requestData = request.json
+        print("requestData",requestData)
+        if (not request.is_json):
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+        mainTransactionData = transactionInstance.getTransaction(
+            requestData['uid'], requestData['transactionId'])
+        print("mainTransactionData",mainTransactionData)
+        response = upi.createOrder(mainTransactionData['amount'], requestData['transactionId'], mainTransactionData['extraData']
+                                     ['customerName'], mainTransactionData['extraData']['customerEmail'], mainTransactionData['extraData']['customerMobile'])
+        # print(response)
+        return response, 200
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': e}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
 if __name__ == '__main__':
-    # server_port = os.environ.get('PORT', '8081')
-    app.run(debug=False, port=8081, host='0.0.0.0')
+    server_port = os.environ.get('PORT', '8081')
+    app.run(debug=False, port=server_port, host='0.0.0.0')
+
+print('Completed transaction')
+transactionInstance.finishTransactions()

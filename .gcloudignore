@@ -19,7 +19,7 @@
 # https://cloud.google.com/sdk/gcloud/reference/topic/gcloudignore
 
 # Ignore everything specified in .gitignore
-#!include:.gitignore
+!include:.gitignore
 
 # Exclude locally installed dependencies
 venv/
