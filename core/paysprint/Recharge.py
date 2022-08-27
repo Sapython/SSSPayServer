@@ -47,13 +47,14 @@ class Recharge:
         :type referenceId: int
         :return: The response is a JSON object.
         """
-        payload = json.dumps({"operator": operator,"canumber": caNumber,"amount": amount,"referenceid": referenceId})
+        payload = {"operator": operator,"canumber": caNumber,"amount": amount,"referenceid": referenceId}
+        print(payload)
         response = requests.request(
-            "POST", self.doRechargeUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.doRechargeUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
-            return {'error': response.json()['message'],'response_code':response.json()['response_code']}
+            return {'error': response.json()['message'],'response_code':response.json()['response_code'],'status':False}, 400
     
     def getStatusEnquiry(self,referenceId:str):
         """
@@ -70,4 +71,4 @@ class Recharge:
         if (response.json()['response_code'] == 1):
             return response.json()  
         else:
-            return {'error': response.json()['message']}, 400
+            return {'error': response.json()['message'],'status':False}, 400

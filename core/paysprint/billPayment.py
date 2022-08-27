@@ -25,9 +25,9 @@ class BillPayment:
         """
         if mode != 'online' and mode != 'offline':
             return {'error': 'Invalid mode'}, 400
-        payload = json.dumps({"mode": mode})
+        payload = {"mode": mode}
         response = requests.request(
-            "POST", self.operatorList, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.operatorList, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
@@ -48,10 +48,9 @@ class BillPayment:
         """
         if mode != 'online' and mode != 'offline':
             return {'error': 'Invalid mode'}
-        payload = json.dumps(
-            {"operator": operatorNo, "canumber": caNumber, "mode": mode})
+        payload = {"operator": operatorNo, "canumber": caNumber, "mode": mode}
         response = requests.request(
-            "POST", self.fetchBillDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.fetchBillDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
@@ -94,7 +93,7 @@ class BillPayment:
         :type userName: str
         :return: The response is a JSON object.
         """
-        payload = json.dumps({
+        payload = {
             "operator": operatorNo,
             "canumber": caNumber,
             "amount": amount,
@@ -103,9 +102,9 @@ class BillPayment:
             "longitude": longitude,
             "mode": "online",
             "bill_fetch": billFetched
-        })
+        }
         response = requests.request(
-            "POST", self.payBillUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.payBillUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
@@ -119,9 +118,9 @@ class BillPayment:
         :type referenceId: str
         :return: The response is being returned.
         """
-        payload = json.dumps({"referenceid": referenceId})
+        payload = {"referenceid": referenceId}
         response = requests.request(
-            "POST", self.statusEnquiryUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.statusEnquiryUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         if (response.json()['status'] == True and response.json()['data']['status'] == '1'):
             return response.json()
         else:

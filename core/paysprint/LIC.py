@@ -27,14 +27,13 @@ class LIC:
         """
         if mode != 'online' and mode != 'offline':
             return {'error': 'Invalid mode'}, 400
-        payload = json.dumps(
-            {"canumber": caNumber, "email": email, "mode": mode})
+        payload = {"canumber": caNumber, "email": email, "mode": mode}
         response = requests.request(
-            "POST", self.fetchLic, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.fetchLic, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         if (response.json()['response_code'] == 1):
-            return response.json()
+            return response.json(), 200
         else:
-            return response.json()
+            return response.json(), 400
 
     def payLicBill(self, caNumber: int, mode: str, amount: int, email: str, referenceId: int, latitude: float, longitude: float, billFetch: dict):
         """
@@ -93,11 +92,10 @@ class LIC:
         """
         if mode != 'online' and mode != 'offline':
             return {'error': 'Invalid mode'}, 400
-        payload = json.dumps(
-            {"canumber": caNumber, "mode": mode, "amount": amount, "ad1": email, "referenceid": referenceId, "latitude": latitude, "longitude": longitude, "bill_fetch": billFetch})
+        payload = {"canumber": caNumber, "mode": mode, "amount": amount, "ad1": email, "referenceid": referenceId, "latitude": latitude, "longitude": longitude, "bill_fetch": billFetch}
         
         response = requests.request(
-            "POST", self.payLicBillUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.payLicBillUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         print(response)
         if (response.json()['response_code'] == 1):
             return response.json()
@@ -112,9 +110,9 @@ class LIC:
         :type referenceId: str
         :return: The response is being returned.
         """
-        payload = json.dumps({"referenceid": referenceId})
+        payload = {"referenceid": referenceId}
         response = requests.request(
-            "GET", self.licStatus, headers=self.auth.generatePaysprintAuthHeaders())
+            "GET", self.licStatus,json=payload, headers=self.auth.generatePaysprintAuthHeaders())
         if (response.json()['response_code'] == 1):
             return response.json()
         else:

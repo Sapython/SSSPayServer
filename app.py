@@ -1,11 +1,10 @@
 """
-A sample Hello World server.
+SSSPay payment server
 """
 import logging
 import os
 import sys
 import time
-from threading import Thread
 
 import firebase_admin
 import google.cloud.logging
@@ -522,24 +521,26 @@ def expressPayout():
         try:
             responseData = payout.quickPayout(
                 transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
-            print("ACTUAL RESPONSE", responseData)
+            # print("ACTUAL RESPONSE", responseData)
             if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
                 message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is pending. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.pendingTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                return {"queued": "Payout created successfully","data":responseData}, 200
             elif (responseData[0]['status'] == 'processed'):
                 message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                return {"success": "Payout created successfully","data":responseData}, 200
             elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
                 message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.pendingTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
-                return {"success": "Payout created successfully"}
-            return responseData
+                return {"failed": "Payout cancelled","data":responseData}, 200
+            return responseData, 200
         except Exception as e:
             logging.error(e)
             if DEVELOPMENT:
@@ -757,7 +758,7 @@ def fetchLpgDetails():
             return jsonify({'error': "Please provide a customerNumber and operatorNumber ", "mainError": str(e)}), 400
         try:
             response = LpgInstance.fetchLpgDetails(caNumber, operatorNo)
-            return jsonify(response), 200
+            return response[0], response[1]
         except Exception as e:
             logging.error(e)
             return jsonify({'error': str(e)}), 400
@@ -907,7 +908,7 @@ def getMobilePlan():
             circle = request.json['circle']
             operator = request.json['operator']
             response = HlrInstance.getPlanInfo(circle, operator)
-            return jsonify(response), 200
+            return response
         except Exception as e:
             logging.error(e)
             return jsonify({'error': str(e)}), 400
@@ -932,7 +933,7 @@ def getOperatorsList():
 
 
 @app.route('/recharge/doRecharge', methods=['POST'])
-def getOperatorInfo():
+def doRecharge():
     auth = authorize()
     if(auth[1] != 200):
         return jsonify(auth[0]), auth[1]
@@ -1097,7 +1098,7 @@ def fetchLicBill():
             email = request.json['email']
             mode = 'online'
             response = LicInstance.fetchLicBill(caNumber, email, mode)
-            return jsonify(response), 200
+            return response
         except Exception as e:
             logging.error(e)
             return jsonify({'error': str(e)}), 400
@@ -1130,7 +1131,7 @@ def payLicBill():
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'lic', response)
-            return jsonify(response), 200
+            return response
         except Exception as e:
             logging.error(e)
             print(e)
@@ -1148,7 +1149,7 @@ def LicStatus():
         try:
             referenceId = request.json['referenceid']
             response = LicInstance.getLicStatus(referenceId)
-            return jsonify(response), 200
+            return response
         except Exception as e:
             logging.error(e)
             return jsonify({'error': str(e)}), 400
@@ -1448,7 +1449,7 @@ def getAepsBalanceEnquiry():
             return jsonify({'error': "Some error occurred"}), 400
 
 
-@app.route('/aeps/cashWithDrawl', methods=['POST'])
+@app.route('/aeps/cashWithdrawal', methods=['POST'])
 def getAepsCashWithDrawl():
     auth = authorize()
     if(auth[1] != 200):
@@ -1471,7 +1472,7 @@ def getAepsCashWithDrawl():
             transactionData['nationalBankIdentification'],
             transactionData['requestRemarks'],
             transactionData['data'],
-            transactionData['amount'],
+            mainTransactionData['amount'],
             transactionData['is_iris'],
             mainTransactionData['merchantCode']
         )
@@ -1746,7 +1747,7 @@ def createPayment():
 
 if __name__ == '__main__':
     server_port = os.environ.get('PORT', '8081')
-    app.run(debug=False, port=server_port, host='0.0.0.0')
+    app.run(debug=True, port=server_port, host='0.0.0.0')
 
 print('Completed transaction')
 transactionInstance.finishTransactions()

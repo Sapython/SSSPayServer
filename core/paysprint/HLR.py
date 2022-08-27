@@ -23,7 +23,7 @@ class HLR:
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
-            if response.json()['response_code'] == 0:
+            if response.json()['response_code'] != 1:
                 # self.developmentMode = False
                 if self.developmentMode:
                     return jsonify({
@@ -51,12 +51,12 @@ class HLR:
             return {'error': 'Cannot fetch DTH info. Try again later'}, 400
 
     def getPlanInfo(self, circle: int, operator: str):
-        payload = json.dumps({"circle": circle, "op": operator})
+        payload = {"circle": circle, "op": operator}
         response = requests.request(
-            "POST", self.browsePlanUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.browsePlanUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         # print('90900',response.json())
         if (response.json()['response_code'] == 1):
-            return response.json()
+            return response.json(), 200
         else:
             if self.developmentMode:
                 return response.json()

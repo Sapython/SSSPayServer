@@ -3,7 +3,6 @@ import base64
 import logging
 import requests
 import datetime
-from app import DEVELOPMENT
 from core.authentication.encryption import Encrypt
 from core.authentication.paysprintAuth import PaySprintAuth
 class AEPS:

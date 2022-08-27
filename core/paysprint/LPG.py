@@ -54,7 +54,7 @@ class LPG:
         response = requests.request(
             "POST", self.fetchLpgDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json()
+            return response.json(), 200
         else:
             if self.developmentMode:
                 return jsonify({
@@ -63,7 +63,7 @@ class LPG:
                     "amount": "899.5",
                     "name": "Kusum .",
                     "message": "Bill Fetched Success."
-                })
+                }), 200
             return {'error': 'Cannot fetch bill details. Try again later'}, 400
 
     def rechargeLpg(self, caNumber: int, operatorNo: int, amount: int, referenceId: int, latitude: float, longitude: float,additionalFields:list,fieldDataValue:dict):
@@ -98,7 +98,7 @@ class LPG:
         print("DATAT ------=======",data)
         payload = json.dumps(data)
         response = requests.request(
-            "POST", self.rechargeLPGUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
+            "POST", self.rechargeLPGUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=data)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
