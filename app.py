@@ -40,7 +40,7 @@ client.setup_logging()
 # pylint: disable=C0103
 app = Flask(__name__)
 CORS(app)
-aeps = AEPS(app,logging)
+aeps = AEPS(app,logging,DEVELOPMENT)
 authService = Authentication(auth, app)
 messaging = Messaging()
 LpgInstance = LPG(app, DEVELOPMENT)
@@ -55,7 +55,7 @@ wallet = Wallet(app)
 payout = Payout(app)
 transactionInstance = Transaction(app, DEVELOPMENT)
 qr = QR(DEVELOPMENT)
-onboarding = Onboarding(app)
+onboarding = Onboarding(app,logging)
 upi = UPI(app)
 HLR_WORKING = False
 
@@ -852,45 +852,15 @@ def getCustomerInfo():
 @app.route('/hlr/getDthInfo', methods=['POST', 'GET'])
 def getDthInfo():
     auth = authorize()
-    return jsonify({
-        "status": True,
-        "response_code": 1,
-        "info": [
-            {
-                "Balance": 461.44,
-                "customerName": "Gaurav Singh",
-                "NextRechargeDate": "01 Jun 2021",
-                "status": "Active",
-                "planname": "Network Fee 0 to 200 Chs Mar20 - Rs 153.4,  End Date: NA,FTA Promo Dec18 Pack - Rs 0.0,  End Date: 17 Mar 2019,Zee Cinema HD - Rs 22.42,  End Date: 12 Apr 2020,India News Uttar Pradesh Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Gulistan News Jun17 - Rs 0.0,  End Date: 26 Apr 2020,Manoranjan TV Jul19 - Rs 0.0,  End Date: 26 Apr 2020,Investigation Discovery Jan20 - Rs 1.18,  End Date: 26 Apr 2020,Zee News Sep16 - Rs 0.12,  End Date: 21 Apr 2020,Star Plus HD - Rs 22.42,  End Date: 16 Sep 2020,Colors HD - Rs 22.42,  End Date: 15 Mar 2020,Rev2 Hungama - Rs 7.08,  End Date: 02 Apr 2020,Rev UTV Movies - Rs 2.36,  End Date: 16 Apr 2020,Star Gold Select HD Dec16 - Rs 11.8,  End Date: 26 Apr 2020,Cartoon Network HD Plus Nov18 - Rs 11.8,  End Date: 26 Apr 2020,AndTV HD - Rs 22.42,  End Date: 04 Sep 2020,Sony Ten 1 HD Sep16 - Rs 22.42,  End Date: NA,Rev Cartoon Network - Rs 5.02,  End Date: NA,Rev Pogo - Rs 5.02,  End Date: NA,Max HD - Rs 20.06,  End Date: NA,Sony Yay Apr17 - Rs 2.36,  End Date: NA,FTA Complimentary Feb19 Pack - Rs 0.0,  End Date: 26 May 2019,ANDPictures HD - Rs 22.42,  End Date: 24 Apr 2020,CNBC Awaaz - Rs 1.18,  End Date: NA,SET HD - Rs 22.42,  End Date: 07 Sep 2020,Colors Cineplex Feb17 - Rs 3.54,  End Date: 06 Apr 2020,9X Jalwa Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Arihant Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Colors Rishtey Jun20 - Rs 1.18,  End Date: 14 Jul 2020,Zee Bollywood - Rs 2.36,  End Date: NA,Rev Zee Cinema - Rs 17.7,  End Date: 14 Apr 2020,Rev NDTV India - Rs 1.18,  End Date: 03 Apr 2020,Star Sports 2 HD - Rs 22.42,  End Date: 12 Apr 2020,Star Sports 1 Sep16 - Rs 22.42,  End Date: 06 Jan 2020,Aastha Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Rev Zee TV - Rs 22.42,  End Date: 25 Apr 2020,Vedic Aug17 - Rs 0.0,  End Date: 26 Apr 2020,Paras TV Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Bansal News Apr18 - Rs 0.0,  End Date: 26 Apr 2020,Zee TV HD - Rs 22.42,  End Date: 15 Mar 2020,Cricket Hindi HD TS Dec18 Pack - Rs 42.48,  End Date: 08 Dec 2019,Rev UTV Action - Rs 2.36,  End Date: 27 Apr 2020,Disney HD Dec18 Bouquet - Rs 9.44,  End Date: 26 Apr 2020,SHALOM TV Sep16 - Rs 0.0,  End Date: 26 Apr 2020,India News Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Star Gold HD - Rs 11.8,  End Date: 14 Apr 2020,Zing - Rs 0.12,  End Date: 18 Apr 2020,Star Gold 2 Feb 20 - Rs 1.18,  End Date: NA,Lord Buddha TV Apr17 - Rs 0.0,  End Date: 26 Apr 2020,MH1 News Sep16 - Rs 0.0,  End Date: 26 Apr 2020,DD News HD Jan19 - Rs 0.0,  End Date: 26 Apr 2020,India News MP CH Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Sony SIX HD - Rs 22.42,  End Date: NA,",
-                "MonthlyRecharge": 578
-            }
-        ],
-        "message": "Fetch Successful"
-    }), 200
     if(auth[1] != 200):
         return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
-            # number = request.json['caNumber']
-            # opType = request.json['operator']
-            return jsonify({
-                "status": True,
-                "response_code": 1,
-                "info": [
-                    {
-                        "Balance": 461.44,
-                        "customerName": "Gaurav Singh",
-                        "NextRechargeDate": "01 Jun 2021",
-                        "status": "Active",
-                        "planname": "Network Fee 0 to 200 Chs Mar20 - Rs 153.4,  End Date: NA,FTA Promo Dec18 Pack - Rs 0.0,  End Date: 17 Mar 2019,Zee Cinema HD - Rs 22.42,  End Date: 12 Apr 2020,India News Uttar Pradesh Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Gulistan News Jun17 - Rs 0.0,  End Date: 26 Apr 2020,Manoranjan TV Jul19 - Rs 0.0,  End Date: 26 Apr 2020,Investigation Discovery Jan20 - Rs 1.18,  End Date: 26 Apr 2020,Zee News Sep16 - Rs 0.12,  End Date: 21 Apr 2020,Star Plus HD - Rs 22.42,  End Date: 16 Sep 2020,Colors HD - Rs 22.42,  End Date: 15 Mar 2020,Rev2 Hungama - Rs 7.08,  End Date: 02 Apr 2020,Rev UTV Movies - Rs 2.36,  End Date: 16 Apr 2020,Star Gold Select HD Dec16 - Rs 11.8,  End Date: 26 Apr 2020,Cartoon Network HD Plus Nov18 - Rs 11.8,  End Date: 26 Apr 2020,AndTV HD - Rs 22.42,  End Date: 04 Sep 2020,Sony Ten 1 HD Sep16 - Rs 22.42,  End Date: NA,Rev Cartoon Network - Rs 5.02,  End Date: NA,Rev Pogo - Rs 5.02,  End Date: NA,Max HD - Rs 20.06,  End Date: NA,Sony Yay Apr17 - Rs 2.36,  End Date: NA,FTA Complimentary Feb19 Pack - Rs 0.0,  End Date: 26 May 2019,ANDPictures HD - Rs 22.42,  End Date: 24 Apr 2020,CNBC Awaaz - Rs 1.18,  End Date: NA,SET HD - Rs 22.42,  End Date: 07 Sep 2020,Colors Cineplex Feb17 - Rs 3.54,  End Date: 06 Apr 2020,9X Jalwa Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Arihant Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Colors Rishtey Jun20 - Rs 1.18,  End Date: 14 Jul 2020,Zee Bollywood - Rs 2.36,  End Date: NA,Rev Zee Cinema - Rs 17.7,  End Date: 14 Apr 2020,Rev NDTV India - Rs 1.18,  End Date: 03 Apr 2020,Star Sports 2 HD - Rs 22.42,  End Date: 12 Apr 2020,Star Sports 1 Sep16 - Rs 22.42,  End Date: 06 Jan 2020,Aastha Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Rev Zee TV - Rs 22.42,  End Date: 25 Apr 2020,Vedic Aug17 - Rs 0.0,  End Date: 26 Apr 2020,Paras TV Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Bansal News Apr18 - Rs 0.0,  End Date: 26 Apr 2020,Zee TV HD - Rs 22.42,  End Date: 15 Mar 2020,Cricket Hindi HD TS Dec18 Pack - Rs 42.48,  End Date: 08 Dec 2019,Rev UTV Action - Rs 2.36,  End Date: 27 Apr 2020,Disney HD Dec18 Bouquet - Rs 9.44,  End Date: 26 Apr 2020,SHALOM TV Sep16 - Rs 0.0,  End Date: 26 Apr 2020,India News Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Star Gold HD - Rs 11.8,  End Date: 14 Apr 2020,Zing - Rs 0.12,  End Date: 18 Apr 2020,Star Gold 2 Feb 20 - Rs 1.18,  End Date: NA,Lord Buddha TV Apr17 - Rs 0.0,  End Date: 26 Apr 2020,MH1 News Sep16 - Rs 0.0,  End Date: 26 Apr 2020,DD News HD Jan19 - Rs 0.0,  End Date: 26 Apr 2020,India News MP CH Sep16 - Rs 0.0,  End Date: 26 Apr 2020,Sony SIX HD - Rs 22.42,  End Date: NA,",
-                        "MonthlyRecharge": 578
-                    }
-                ],
-                "message": "Fetch Successful"
-            }), 200
+            number = request.json['caNumber']
+            opType = request.json['operator']
             response = HlrInstance.getDthInfo(number, opType)
             print("dth response", response)
-            return jsonify(response), 200
+            return response
         except Exception as e:
             logging.error(e)
             return jsonify({'error': str(e)}), 400
@@ -984,13 +954,16 @@ def statusEnquiry():
         try:
             referenceId = request.json['referenceid']
             response = RechargeInstance.getStatusEnquiry(referenceId)
-            return jsonify(response), 200
+            return response, 200
         except Exception as e:
             logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
+@app.route('/recharge/callback')
+def rechargeCallback():
+    return jsonify({"status":200,"message":"Transaction completed successfully"}), 200
 
 # BillPayment services
 
@@ -1068,11 +1041,11 @@ def payBill():
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
-@app.route('/billPayment/billStatusEnquiry')
+@app.route('/billPayment/billStatusEnquiry',methods=['POST'])
 def billStatusEnquiry():
-    auth = authorize()
-    if(auth[1] != 200):
-        return jsonify(auth[0]), auth[1]
+    # auth = authorize()
+    # if(auth[1] != 200):
+    #     return jsonify(auth[0]), auth[1]
     if request.is_json:
         try:
             referenceId = request.json['referenceid']
@@ -1083,6 +1056,10 @@ def billStatusEnquiry():
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
+
+@app.route('/billPayment/callback', methods=['POST'])
+def billCallback():
+    return {"status":200,"message":"Transaction completed successfully"},200
 
 # LIC services
 
@@ -1674,7 +1651,6 @@ def registerQr():
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
-
 @app.route('/onboarding/setup', methods=['POST'])
 def onboardingSetup():
     print(request)
@@ -1687,6 +1663,7 @@ def onboardingSetup():
             return jsonify({'error': "We didn't received your data in json format "}), 400
         getUser = transactionInstance.getUser(request.json['uid'])
         print(getUser)
+        logging.error(getUser)
         response = onboarding.onboardingWeb(
             getUser['userId'],
             getUser['phoneNumber'],
@@ -1695,6 +1672,7 @@ def onboardingSetup():
             request.json['uid'],
         )
         print(response)
+        logging.error(response)
         return response, 200
     except Exception as e:
         logging.error(e)
@@ -1702,6 +1680,27 @@ def onboardingSetup():
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "Some error occurred"}), 400
 
+
+@app.route('/onboarding/status',methods = ['POST'])
+def checkOnboardingStatus():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    try:
+        if (not request.is_json):
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+        getUser = transactionInstance.getUser(request.json['uid'])
+        print(getUser)
+        logging.error(getUser)
+        response = onboarding.checkStatus(request.json)
+        print(response)
+        logging.error(response)
+        return response
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "Some error occurred"}), 400
 
 @app.route('/onboarding/callback', methods=['POST'])
 def onboardingCallback():
@@ -1735,7 +1734,7 @@ def createPayment():
             requestData['uid'], requestData['transactionId'])
         print("mainTransactionData",mainTransactionData)
         response = upi.createOrder(mainTransactionData['amount'], requestData['transactionId'], mainTransactionData['extraData']
-                                     ['customerName'], mainTransactionData['extraData']['customerEmail'], mainTransactionData['extraData']['customerMobile'])
+                                     ['customerName'], mainTransactionData['extraData']['customerEmail'], mainTransactionData['extraData']['customerMobile'], requestData['uid'])
         # print(response)
         return response, 200
     except Exception as e:
@@ -1745,9 +1744,30 @@ def createPayment():
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 
+@app.route('/upi/status', methods=['POST'])
+def qrStatus():
+    try:
+        response = upi.checkStatus(request.json['transactionId'],request.json['date'])
+        print(response, response.json())
+        if (response.json()['status']==True):
+            message = "Your upi transaction " + \
+                request.json['transactionId'] + " is successful"
+            transactionInstance.completeTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
+            return response.json(), 200
+        else:
+            message = "Your upi transaction " + \
+                request.json['transactionId'] + " is failed"
+            transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
+            return response.json(), 400
+    except Exception as e:
+        logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
 if __name__ == '__main__':
     server_port = os.environ.get('PORT', '8081')
-    app.run(debug=True, port=server_port, host='0.0.0.0')
+    app.run(debug=False, port=server_port, host='0.0.0.0')
 
 print('Completed transaction')
 transactionInstance.finishTransactions()

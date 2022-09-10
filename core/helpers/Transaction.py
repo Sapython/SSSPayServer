@@ -41,17 +41,18 @@ class Transaction:
         startTime = time.time()
         userData = self.fs.collection('users').document(userId).get().to_dict()
         print(userData)
-        self.notification.send(
-            message, userData['phoneNumber'], userData['userId'], paymentType)
-        self.fs.collection(
-            'users').document(userId).collection(
-                'transaction').document(transactionId).update(
-            {
-                "completed": False,
-                "status": "error",
-                "error": errorData
-            })
-        print('Transaction completed', time.time() - startTime)
+        if (userData):
+            self.notification.send(
+                message, userData['phoneNumber'], userData['uid'], paymentType)
+            self.fs.collection(
+                'users').document(userId).collection(
+                    'transaction').document(transactionId).update(
+                {
+                    "completed": False,
+                    "status": "error",
+                    "error": errorData
+                })
+            print('Transaction completed', time.time() - startTime)
 
     def pendingTransactionProcess(self, userId: str, transactionId: str, message: str, paymentType: str, successData: dict):
         startTime = time.time()
@@ -72,18 +73,19 @@ class Transaction:
     def completeTransactionProcess(self, userId: str, transactionId: str, message: str, paymentType: str, successData: dict):
         startTime = time.time()
         userData = self.fs.collection('users').document(userId).get().to_dict()
-        print(userData)
-        self.notification.send(
-            message, userData['phoneNumber'], userData['userId'], paymentType)
-        self.fs.collection(
-            'users').document(userId).collection(
-                'transaction').document(transactionId).update(
-            {
-                "completed": True,
-                "status": "success",
-                "successData": successData
-            })
-        print('Transaction completed', time.time() - startTime)
+        if (userData):
+            print(userData)
+            self.notification.send(
+                message, userData['phoneNumber'], userData['userId'], paymentType)
+            self.fs.collection(
+                'users').document(userId).collection(
+                    'transaction').document(transactionId).update(
+                {
+                    "completed": True,
+                    "status": "success",
+                    "successData": successData
+                })
+            print('Transaction completed', time.time() - startTime)
 
     def checkBalance(self, amount: int, userId: str):
         user = self.fs.collection('users').document(
@@ -132,3 +134,5 @@ class Transaction:
     
     def getUser(self,userId):
         return self.fs.collection('users').document(userId).get().to_dict()
+
+    

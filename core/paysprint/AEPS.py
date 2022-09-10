@@ -6,7 +6,7 @@ import datetime
 from core.authentication.encryption import Encrypt
 from core.authentication.paysprintAuth import PaySprintAuth
 class AEPS:
-    def __init__(self,app,logging):
+    def __init__(self,app,logging,development):
         super().__init__()
         self.__aeps_url = "https://paysprint.in/service-api/api/v1/service/aeps/balanceenquiry/index"
         self.encryption = Encrypt()
@@ -14,6 +14,7 @@ class AEPS:
         self.auth = PaySprintAuth(app)
         self.subMerchantId = "PS00716"
         self.ipaddress = "34.126.221.178"
+        self.development = development
 
     def encodeBase64(self,data):
         return base64.b64encode(data)
@@ -34,18 +35,16 @@ class AEPS:
             return {'message': 'Missing adhaarNumber'}, 400
         if not nationalBankIdentification:
             return {'message': 'Missing nationalBankIdentification'}, 400
-        if not requestRemarks:
-            return {'message': 'Missing requestRemarks'}, 400
         if not authData:
             return {'message': 'Missing authData'}, 400
         if not merchantCode:
             return {'message': 'Missing merchantCode'}, 400
-        if (is_iris):
-            is_iris= 'Yes'
-        elif (is_iris==False):
-            is_iris= 'No'
-        else:
-            return {'message': 'Missing is_iris'}, 400
+        # if (is_iris):
+        #     is_iris= 'Yes'
+        # elif (is_iris==False):
+        #     is_iris= 'No'
+        # else:
+        #     return {'message': 'Missing is_iris'}, 400
         data = {
             'latitude':str(latitude),
             'longitude':str(longitude),
@@ -61,12 +60,14 @@ class AEPS:
             'timestamp':str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
             "transactiontype":'BE',
             "submerchantid":merchantCode,
-            "is_iris":is_iris
+            "is_iris":is_iris,
+            "key":"",
+            "iv":""
         }
-        self.logging.info("aepsData"+str(data))
+        self.logging.info("aepsData "+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
-            "body":self.encodeBase64(encoded).decode()
+            "body":encoded
         }
         self.logging.info(payload)
         headers = self.auth.generatePaysprintAuthHeaders()
@@ -86,18 +87,10 @@ class AEPS:
             return {'message': 'Missing adhaarNumber'}, 400
         if not nationalBankIdentification:
             return {'message': 'Missing nationalBankIdentification'}, 400
-        if not requestRemarks:
-            return {'message': 'Missing requestRemarks'}, 400
         if not authData:
             return {'message': 'Missing authData'}, 400
         if not amount:
             return {'message': 'Missing amount'}, 400
-        if (is_iris):
-            is_iris= 'Yes'
-        elif (is_iris==False):
-            is_iris= 'No'
-        else:
-            return {'message': 'Missing is_iris'}, 400
         data = {
             'latitude':str(latitude),
             'longitude':str(longitude),
@@ -119,7 +112,7 @@ class AEPS:
         self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
-            "body":self.encodeBase64(encoded).decode()
+            "body":encoded
         }
         self.logging.info(payload)
         response = requests.post("https://paysprint.in/service-api/api/v1/service/aeps/cashwithdraw/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
@@ -138,18 +131,8 @@ class AEPS:
             return {'message': 'Missing adhaarNumber'}, 400
         if not nationalBankIdentification:
             return {'message': 'Missing nationalBankIdentification'}, 400
-        if not requestRemarks:
-            return {'message': 'Missing requestRemarks'}, 400
         if not authData:
             return {'message': 'Missing authData'}, 400
-
-        if (is_iris):
-            is_iris= 'Yes'
-        elif (is_iris==False):
-            is_iris= 'No'
-        else:
-            return {'message': 'Missing is_iris'}, 400
-        
         data = {
             'latitude':str(latitude),
             'longitude':str(longitude),
@@ -167,13 +150,13 @@ class AEPS:
             "submerchantid":merchantCode,
             "is_iris":is_iris
         }
-        if DEVELOPMENT: print("DATA",data)
+        if self.development: print("DATA",data)
         self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":self.encodeBase64(encoded).decode()
         }
-        if DEVELOPMENT: print(self.encodeBase64(payload))
+        if self.development: print(self.encodeBase64(payload))
         self.logging.info(payload)
         response = requests.post("https://paysprint.in/service-api/api/v1/service/aeps/ministatement/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
         return response.json(), response.status_code
@@ -188,7 +171,7 @@ class AEPS:
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         print(self.encodeBase64(encoded))
         payload = {
-            "body":self.encodeBase64(encoded).decode()
+            "body":encoded
         }
         self.logging.info(payload)
         response = requests.post("https://paysprint.in/service-api/api/v1/service/aeps/aepsquery/query",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
@@ -229,8 +212,6 @@ class AEPS:
             return {'message': 'Missing adhaarNumber'}, 400
         if not nationalBankIdentification:
             return {'message': 'Missing nationalBankIdentification'}, 400
-        if not requestRemarks:
-            return {'message': 'Missing requestRemarks'}, 400
         if not authData:
             return {'message': 'Missing authData'}, 400
         if not amount:

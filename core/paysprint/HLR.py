@@ -44,7 +44,7 @@ class HLR:
         response = requests.request(
             "POST", self.dthInfoUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
         if (response.json()['response_code'] == 1):
-            return response.json()
+            return response.json(), response.status_code
         else:
             if self.developmentMode:
                 return response.text

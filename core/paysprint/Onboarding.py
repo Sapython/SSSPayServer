@@ -8,8 +8,9 @@ from core.authentication.encryption import Encrypt
 from core.authentication.paysprintAuth import PaySprintAuth
 
 class Onboarding:
-    def __init__(self, app):
+    def __init__(self, app,logging):
         self.auth = PaySprintAuth(app)
+        self.logging = logging
         self.encrypt = Encrypt()
         self.fs = firestore.client()
 
@@ -28,6 +29,20 @@ class Onboarding:
         print(response.content == response.json())
         print(response.text)
         return response.json()
+    
+    def checkStatus(self,data):
+        # print("-----------")
+        # print("STATUS ",data)
+        # print("-----------")
+        url = "https://paysprint.in/service-api/api/v1/service/onboard/onboard/getonboardstatus"
+        if not data['mobile']:
+            return {"status":400,"message":"Mobile number is required"}, 400
+        if not data['merchantcode']:
+            return {"status":400,"message":"Merchant code is required"}, 400
+        data['pipe'] = 'bank1'
+        response = requests.post(url, json=data,headers=self.auth.generatePaysprintAuthHeaders())
+        return response.json(), response.status_code
+
 
     def handleCallbackData(self,data):
         callback = self.encrypt.decrypt(data)

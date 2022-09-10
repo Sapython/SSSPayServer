@@ -65,10 +65,11 @@ class Recharge:
         :type referenceId: str
         :return: The response is being returned.
         """
-        payload = json.dumps({"referenceid": referenceId})
+        payload = {"referenceid": referenceId}
         response = requests.request(
-            "POST", self.statusEnquiryUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
-        if (response.json()['response_code'] == 1):
+            "POST", self.statusEnquiryUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
+        print("response.text",response.text)
+        if (response.json()['responsecode'] == 1):
             return response.json()  
         else:
             return {'error': response.json()['message'],'status':False}, 400

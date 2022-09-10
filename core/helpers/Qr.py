@@ -34,3 +34,4 @@ class QR:
                 'qrCode': response.json()
             })
             return response.json(),200
+        
