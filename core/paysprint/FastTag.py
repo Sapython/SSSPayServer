@@ -6,10 +6,10 @@ from core.authentication.paysprintAuth import PaySprintAuth
 class FastTag:
     def __init__(self,app):
         self.auth = PaySprintAuth(app)
-        self.operatorListUrl = 'https://paysprint.in/service-api/api/v1/service/fastag/Fastag/operatorsList'
-        self.fetchConsumerDetailsUrl = 'https://paysprint.in/service-api/api/v1/service/fastag/Fastag/fetchConsumerDetails'
-        self.rechargeUrl = 'https://paysprint.in/service-api/api/v1/service/fastag/Fastag/recharge'
-        self.getStatusURl = 'https://paysprint.in/service-api/api/v1/service/fastag/Fastag/status'
+        self.operatorListUrl = 'https://api.paysprint.in/api/v1/service/fastag/Fastag/operatorsList'
+        self.fetchConsumerDetailsUrl = 'https://api.paysprint.in/api/v1/service/fastag/Fastag/fetchConsumerDetails'
+        self.rechargeUrl = 'https://api.paysprint.in/api/v1/service/fastag/Fastag/recharge'
+        self.getStatusURl = 'https://api.paysprint.in/api/v1/service/fastag/Fastag/status'
 
     def getOperatorsList(self):
         response = requests.request(

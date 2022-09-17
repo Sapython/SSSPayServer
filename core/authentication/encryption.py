@@ -3,8 +3,8 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 class Encrypt:
     def __init__(self):
-        self.key = '519d2ac605e1b233'.encode('utf-8')
-        self.iv = 'a3c63fe72e143786'.encode('utf-8')
+        self.key = 'b146ac61d6d57adf'.encode('utf-8')
+        self.iv = '9f8bf3bcc790d495'.encode('utf-8')
 
     def encrypt(self,text:any):
         cipher = AES.new(self.key,AES.MODE_CBC,iv=self.iv)

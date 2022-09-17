@@ -8,11 +8,11 @@ from core.authentication.paysprintAuth import PaySprintAuth
 class AEPS:
     def __init__(self,app,logging,development):
         super().__init__()
-        self.__aeps_url = "https://paysprint.in/service-api/api/v1/service/aeps/balanceenquiry/index"
+        self.__aeps_url = "https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index"
         self.encryption = Encrypt()
         self.logging = logging
         self.auth = PaySprintAuth(app)
-        self.subMerchantId = "PS00716"
+        self.subMerchantId = "PS001619"
         self.ipaddress = "34.126.221.178"
         self.development = development
 
@@ -20,7 +20,7 @@ class AEPS:
         return base64.b64encode(data)
     
     def getBankList(self):
-        return requests.post('https://paysprint.in/service-api/api/v1/service/aeps/banklist/index',headers = self.auth.generatePaysprintAuthHeaders())
+        return requests.post('https://api.paysprint.in/api/v1/service/aeps/banklist/index',headers = self.auth.generatePaysprintAuthHeaders())
 
     def getBalanceEnquiry(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,is_iris:str,merchantCode:str):
         if not latitude:
@@ -64,6 +64,7 @@ class AEPS:
             "key":"",
             "iv":""
         }
+        print("Request",data)
         self.logging.info("aepsData "+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
@@ -71,9 +72,11 @@ class AEPS:
         }
         self.logging.info(payload)
         headers = self.auth.generatePaysprintAuthHeaders()
-        response = requests.post("https://paysprint.in/service-api/api/v1/service/aeps/balanceenquiry/index",data=payload,headers=headers)
+        response = requests.post("https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index",data=payload,headers=headers)
+        print("Response",response.json())
         return response.json(), response.status_code
     
+
     def withdrawCash(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,amount:int,is_iris:str,merchantCode:str):
         if not latitude:
             return {'message': 'Missing latitude'}, 400
@@ -103,19 +106,25 @@ class AEPS:
             'requestremarks':str(requestRemarks),
             'data':authData,
             'pipe':'bank1',
-            'timestamp':str(datetime.datetime.now().strftime(fmt='%Y-%m-%d %H:%M:%S')),
+            'timestamp':str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
             "transactiontype":'CW',
             "submerchantid":merchantCode,
             "amount":int(amount),
             "is_iris":is_iris
         }
+        print('-'*20)
+        print('Request',data)
+        print('-'*20)
         self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded
         }
         self.logging.info(payload)
-        response = requests.post("https://paysprint.in/service-api/api/v1/service/aeps/cashwithdraw/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
+        response = requests.post("https://api.paysprint.in/api/v1/service/aeps/cashwithdraw/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
+        print('-'*20)
+        print('Response',response.json())
+        print('-'*20)
         return response.json(), response.status_code
 
     def getMiniStatement(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,is_iris:str,merchantCode:str):
@@ -145,20 +154,27 @@ class AEPS:
             'requestremarks':requestRemarks,
             'data':authData,
             'pipe':'bank1',
-            'timestamp':datetime.datetime.now().strftime(fmt='%Y-%m-%d %H:%M:%S'),
+            'timestamp':datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "transactiontype":"MS",
             "submerchantid":merchantCode,
             "is_iris":is_iris
         }
+        print('-'*20)
+        print('Request',data)
+        print('-'*20)
+        print("DataDump",json.dumps(data).encode('utf-8'),type(json.dumps(data).encode('utf-8')))
         if self.development: print("DATA",data)
         self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
-            "body":self.encodeBase64(encoded).decode()
+            "body":encoded
         }
-        if self.development: print(self.encodeBase64(payload))
-        self.logging.info(payload)
-        response = requests.post("https://paysprint.in/service-api/api/v1/service/aeps/ministatement/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
+        if self.development: print(payload)
+        # self.logging.info(payload)    
+        response = requests.post("https://api.paysprint.in/api/v1/service/aeps/ministatement/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
+        print('-'*20)
+        print('Response',response.json())
+        print('-'*20)
         return response.json(), response.status_code
     
     def getCashWithdrawStatus(self,referenceNo:str):
@@ -169,12 +185,11 @@ class AEPS:
         }
         self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
-        print(self.encodeBase64(encoded))
         payload = {
             "body":encoded
         }
         self.logging.info(payload)
-        response = requests.post("https://paysprint.in/service-api/api/v1/service/aeps/aepsquery/query",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
+        response = requests.post("https://api.paysprint.in/api/v1/service/aeps/aepsquery/query",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
         logging.info(response)
         print("Response:",response)
         return response.json(), response.status_code
@@ -191,15 +206,14 @@ class AEPS:
         self.logging.info("aepsData"+str(data))
         print("DATA",data)
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
-        print(self.encodeBase64(encoded))
         payload = {
-            "body":self.encodeBase64(encoded).decode()
+            "body":encoded
         }
         self.logging.info(payload)
-        response = requests.post("https://paysprint.in/service-api/api/v1/service/aeps/threeway/threeway",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
+        response = requests.post("https://api.paysprint.in/api/v1/service/aeps/threeway/threeway",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
         return response.json(), response.status_code
     
-    def aadhaarPay(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,amount:int,is_iris:str,subMerchantId:str):
+    def aadhaarPay(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,is_iris:str,merchantCode:str):
         if not latitude:
             return {'message': 'Missing latitude'}, 400
         if not longitude:
@@ -214,10 +228,6 @@ class AEPS:
             return {'message': 'Missing nationalBankIdentification'}, 400
         if not authData:
             return {'message': 'Missing authData'}, 400
-        if not amount:
-            return {'message': 'Missing amount'}, 400
-        if not (is_iris==True or is_iris==False):
-            return {'message': 'Missing is_iris'}, 400
         data = {
             'latitude':str(latitude),
             'longitude':str(longitude),
@@ -227,24 +237,25 @@ class AEPS:
             'adhaarnumber':str(adhaarNumber),
             'accessmodetype':'SITE',
             'nationalbankidentification':nationalBankIdentification,
-            'requestremarks':str(requestRemarks),
+            'requestremarks':requestRemarks,
+            'amount':1,
             'data':authData,
             'pipe':'bank1',
-            'amount':amount,
-            'timestamp':datetime.datetime.now().strftime(fmt='%Y-%m-%d %H:%M:%S'),
-            "transactiontype":'M',
-            "submerchantid":subMerchantId,
+            'timestamp':datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            "transactiontype":"MS",
+            "submerchantid":merchantCode,
             "is_iris":is_iris
         }
-        print("DATA",data)
+        print("DataDump",json.dumps(data).encode('utf-8'),type(json.dumps(data).encode('utf-8')))
+        if self.development: print("DATA",data)
+        self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
-        print(self.encodeBase64(encoded))
         payload = {
-            "body":self.encodeBase64(encoded).decode()
+            "body":encoded
         }
-        response = requests.post("https://paysprint.in/service-api/api/v1/service/aadharpay/aadharpay/index",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
-        print('Payload: ',payload)
-        print("Response:",response)
+        if self.development: print(payload)
+        # self.logging.info(payload)    
+        response = requests.post("https://api.paysprint.in/api/v1/service/aadharpay/aadharpay/index",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
         return response.json(), response.status_code
     
     def getAadhaarPaymentStatus(self,referenceId:str):
@@ -261,5 +272,5 @@ class AEPS:
             "body":self.encodeBase64(encoded).decode()
         }
         logging.info(payload)
-        response = requests.get("https://paysprint.in/service-api/api/v1/service/aadharpay/aadharpayquery/query",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
+        response = requests.get("https://api.paysprint.in/api/v1/service/aadharpay/aadharpayquery/query",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
         return response.json(), response.status_code

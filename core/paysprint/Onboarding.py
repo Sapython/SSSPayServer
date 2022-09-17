@@ -15,7 +15,7 @@ class Onboarding:
         self.fs = firestore.client()
 
     def onboardingWeb(self,merchantCode:str,mobile:int,is_new:int,email:str,referenceId:str):
-        url = "https://paysprint.in/service-api/api/v1/service/onboard/onboardnew/getonboardurl"
+        url = "https://api.paysprint.in/api/v1/service/onboard/onboardnew/getonboardurl"
         merchantCode = {
             "merchantcode": merchantCode,
             "mobile": str(mobile),
@@ -24,6 +24,7 @@ class Onboarding:
             "firm": "SSSPay",
             "callback": f"https://ssspay-proxy-server-76zqkqboia-em.a.run.app/onboarding/callback"
         }
+        self.logging.info(merchantCode)
         response = requests.post(url, json=merchantCode,headers=self.auth.generatePaysprintAuthHeaders())
         print(response.content == response.text)
         print(response.content == response.json())
@@ -34,12 +35,13 @@ class Onboarding:
         # print("-----------")
         # print("STATUS ",data)
         # print("-----------")
-        url = "https://paysprint.in/service-api/api/v1/service/onboard/onboard/getonboardstatus"
+        url = "https://api.paysprint.in/api/v1/service/onboard/onboard/getonboardstatus"
         if not data['mobile']:
             return {"status":400,"message":"Mobile number is required"}, 400
         if not data['merchantcode']:
             return {"status":400,"message":"Merchant code is required"}, 400
         data['pipe'] = 'bank1'
+        self.logging.info(data)
         response = requests.post(url, json=data,headers=self.auth.generatePaysprintAuthHeaders())
         return response.json(), response.status_code
 

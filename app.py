@@ -30,6 +30,9 @@ from core.paysprint.Onboarding import Onboarding
 from core.paysprint.Recharge import Recharge
 from core.paysprint.Upi import UPI
 
+import os
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="keys/ssspay-prod-firebase-adminsdk-ouiri-dffb470966.json"
+
 cred = credentials.Certificate(
     "keys/ssspay-prod-firebase-adminsdk-ouiri-dffb470966.json")
 DEVELOPMENT = True
@@ -1436,8 +1439,9 @@ def getAepsCashWithDrawl():
     try:
         jsonData = request.json
         mainTransactionData = transactionInstance.getTransaction(
-            jsonData['uid'], jsonData['transactionId'])['extraData']
-        transactionData = mainTransactionData['aepsData']
+            jsonData['uid'], jsonData['transactionId'])
+        print(mainTransactionData)
+        transactionData = mainTransactionData['extraData']['aepsData']
         transactionData['data'] = transactionData['data'].replace('{PID=', '')
         transactionData['data'] = transactionData['data'].replace('}', '')
         response = aeps.withdrawCash(
@@ -1451,7 +1455,7 @@ def getAepsCashWithDrawl():
             transactionData['data'],
             mainTransactionData['amount'],
             transactionData['is_iris'],
-            mainTransactionData['merchantCode']
+            mainTransactionData['extraData']['merchantCode']
         )
         print(response[0])
         logging.info(response)
@@ -1498,7 +1502,7 @@ def miniStatement():
             mainTransactionData['merchantCode']
         )
         print(response)
-        logging.info(response)
+        # logging.info(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Balance Enquiry is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
@@ -1576,24 +1580,29 @@ def aadhaarPay():
         return jsonify({'error': "We didn't received your data in json format "}), 400
     try:
         jsonData = request.json
+        mainTransactionData = transactionInstance.getTransaction(
+            jsonData['uid'], jsonData['transactionId'])['extraData']
+        transactionData = mainTransactionData['aepsData']
+        transactionData['data'] = transactionData['data'].replace('{PID=', '')
+        transactionData['data'] = transactionData['data'].replace('}', '')
         response = aeps.aadhaarPay(
-            jsonData['latitude'],
-            jsonData['longitude'],
-            jsonData['mobile_number'],
-            jsonData['referenceNo'],
-            jsonData['ipaddress'],
-            jsonData['adhaarNumber'],
-            jsonData['nationalBankIdentification'],
-            jsonData['requestRemarks'],
-            jsonData['authData'],
-            jsonData['pipe'],
-            jsonData['amount'],
-            jsonData['transactionType'],
-            jsonData['is_iris']
+                transactionData['latitude'],
+            transactionData['longitude'],
+            transactionData['mobile_number'],
+            transactionData['referenceNo'],
+            transactionData['adhaarNumber'],
+            transactionData['nationalBankIdentification'],
+            transactionData['requestRemarks'],
+            transactionData['data'],
+            transactionData['is_iris'],
+            mainTransactionData['merchantCode']
         )
         print(response)
-        if (response[0]['response_code'] == 1):
-            return response, 200
+        # logging.info(response)
+        if (response[0]['response_code'] == 1 and response[1] == 200):
+            message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+            return response
         else:
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
@@ -1663,7 +1672,7 @@ def onboardingSetup():
             return jsonify({'error': "We didn't received your data in json format "}), 400
         getUser = transactionInstance.getUser(request.json['uid'])
         print(getUser)
-        logging.error(getUser)
+        # logging.error(getUser)
         response = onboarding.onboardingWeb(
             getUser['userId'],
             getUser['phoneNumber'],
@@ -1691,7 +1700,7 @@ def checkOnboardingStatus():
             return jsonify({'error': "We didn't received your data in json format "}), 400
         getUser = transactionInstance.getUser(request.json['uid'])
         print(getUser)
-        logging.error(getUser)
+        # logging.error(getUser)
         response = onboarding.checkStatus(request.json)
         print(response)
         logging.error(response)
@@ -1767,7 +1776,7 @@ def qrStatus():
 
 if __name__ == '__main__':
     server_port = os.environ.get('PORT', '8081')
-    app.run(debug=False, port=server_port, host='0.0.0.0')
+    app.run(debug=True, port=server_port, host='0.0.0.0')
 
 print('Completed transaction')
 transactionInstance.finishTransactions()

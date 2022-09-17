@@ -10,10 +10,10 @@ class HLR:
         self.authorizedKey = ''
         self.auth = PaySprintAuth(app)
         self.developmentMode = developmentMode
-        self.hlrUrl = 'https://paysprint.in/service-api/api/v1/service/recharge/hlrapi/hlrcheck'
-        self.dthInfoUrl = 'https://paysprint.in/service-api/api/v1/service/recharge/hlrapi/dthinfo'
-        self.browsePlanUrl = 'https://paysprint.in/service-api/api/v1/service/recharge/hlrapi/browseplan'
-        self.utmAccountLink = "https://paysprint.in/service-api/api/v1/service/axisbank-utm/axisutm/generateurl"
+        self.hlrUrl = 'https://api.paysprint.in/api/v1/service/recharge/hlrapi/hlrcheck'
+        self.dthInfoUrl = 'https://api.paysprint.in/api/v1/service/recharge/hlrapi/dthinfo'
+        self.browsePlanUrl = 'https://api.paysprint.in/api/v1/service/recharge/hlrapi/browseplan'
+        self.utmAccountLink = "https://api.paysprint.in/api/v1/service/axisbank-utm/axisutm/generateurl"
 
     def getOperator(self, number: int, operatorType: str):
         payload = json.dumps({"number": number, "type": operatorType})

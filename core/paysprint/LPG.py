@@ -16,10 +16,10 @@ class LPG:
         """
         self.developmentMode = developmentMode
         self.auth = PaySprintAuth(app)
-        self.operatorListUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/lpg/getoperator'
-        self.fetchLpgDetailsUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/lpg/fetchbill'
-        self.rechargeLPGUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/lpg/paybill'
-        self.statusUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/lpg/status'
+        self.operatorListUrl = 'https://api.paysprint.in/api/v1/service/bill-payment/lpg/getoperator'
+        self.fetchLpgDetailsUrl = 'https://api.paysprint.in/api/v1/service/bill-payment/lpg/fetchbill'
+        self.rechargeLPGUrl = 'https://api.paysprint.in/api/v1/service/bill-payment/lpg/paybill'
+        self.statusUrl = 'https://api.paysprint.in/api/v1/service/bill-payment/lpg/status'
 
     def getOperatorList(self, mode: str):
         """

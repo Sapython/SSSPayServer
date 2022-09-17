@@ -9,10 +9,10 @@ class BillPayment:
 
         :param billPayment: This is the object of the BillPayment class
         """
-        self.operatorList = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/getoperator'
-        self.fetchBillDetailsUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/fetchbill'
-        self.payBillUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/paybill'
-        self.statusEnquiryUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/status'
+        self.operatorList = 'https://api.paysprint.in/api/v1/service/bill-payment/bill/getoperator'
+        self.fetchBillDetailsUrl = 'https://api.paysprint.in/api/v1/service/bill-payment/bill/fetchbill'
+        self.payBillUrl = 'https://api.paysprint.in/api/v1/service/bill-payment/bill/paybill'
+        self.statusEnquiryUrl = 'https://api.paysprint.in/api/v1/service/bill-payment/bill/status'
         self.auth = PaySprintAuth(app)
 
     def getOperatorList(self, mode: str):

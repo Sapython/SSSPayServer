@@ -5,21 +5,13 @@ import base64
 class PaySprintAuth:
     def __init__(self, app):
         self.app = app
-        self.paySprintKey = "UFMwMDcxNmI5YWIzN2YyZDMzZWM3NDg5YjkzYzAyOGE2ZmNmZDIw"
+        self.paySprintKey = "UFMwMDE2MTk1NjNkNThkNjM1NDAyYjRkMjg3M2Q3MmRjNDAyYjAwYg=="
     def generatePaysprintAuthHeaders(self):
-        requestCounter = 0
-        with open(os.path.join(self.app.root_path, 'database','counter.txt'),'w+') as requestCounterFile:
-            if (not requestCounterFile.read()):
-                requestCounter = 1
-            else:
-                requestCounter = int(requestCounterFile.read())
-            requestCounter += 1
-            requestCounterFile.seek(0)
-            requestCounterFile.write(str(requestCounter))
-
+        # Generate random number using time the timestamp
+        requestCounter = str(int(time.time()))
         encodedJWT = jwt.encode({
             "timestamp":str(int(time.time())*1000),
-            "partnerId":"PS00716",
+            "partnerId":"PS001619",
             "reqid":str(requestCounter)
         }, self.paySprintKey, algorithm="HS256")
         # print(encodedJWT)
@@ -27,7 +19,7 @@ class PaySprintAuth:
             'Token': encodedJWT,
             # 'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Authorisedkey':'ZDU2NWVlNmE3MmExMTdiYzYyOTVmMGEzN2FkNzAxZTQ='
+            # 'Authorisedkey':'ZDU2NWVlNmE3MmExMTdiYzYyOTVmMGEzN2FkNzAxZTQ='
         }
         return headers
     

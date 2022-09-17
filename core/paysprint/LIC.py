@@ -9,9 +9,9 @@ class LIC:
         It's a constructor for the class
         """
         self.auth = PaySprintAuth(app)
-        self.fetchLic = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/fetchlicbill'
-        self.payLicBillUrl = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/paylicbill'
-        self.licStatus = 'https://paysprint.in/service-api/api/v1/service/bill-payment/bill/licstatus'
+        self.fetchLic = 'https://api.paysprint.in/api/v1/service/bill-payment/bill/fetchlicbill'
+        self.payLicBillUrl = 'https://api.paysprint.in/api/v1/service/bill-payment/bill/paylicbill'
+        self.licStatus = 'https://api.paysprint.in/api/v1/service/bill-payment/bill/licstatus'
 
     def fetchLicBill(self, caNumber: int, email: str, mode: str):
         """
@@ -28,8 +28,13 @@ class LIC:
         if mode != 'online' and mode != 'offline':
             return {'error': 'Invalid mode'}, 400
         payload = {"canumber": caNumber, "email": email, "mode": mode}
+        print('-' * 50)
+        print("Request",payload)
+        print('-' * 50)
         response = requests.request(
             "POST", self.fetchLic, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
+        print(response.json())
+
         if (response.json()['response_code'] == 1):
             return response.json(), 200
         else:
@@ -93,10 +98,14 @@ class LIC:
         if mode != 'online' and mode != 'offline':
             return {'error': 'Invalid mode'}, 400
         payload = {"canumber": caNumber, "mode": mode, "amount": amount, "ad1": email, "referenceid": referenceId, "latitude": latitude, "longitude": longitude, "bill_fetch": billFetch}
-        
+        print('-' * 50)
+        print("Request",payload)
+        print('-' * 50)
         response = requests.request(
             "POST", self.payLicBillUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
-        print(response)
+        print('-' * 50)
+        print("Response",response.json())
+        print('-' * 50)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
@@ -111,8 +120,14 @@ class LIC:
         :return: The response is being returned.
         """
         payload = {"referenceid": referenceId}
+        print('-' * 50)
+        print("Request",payload)
+        print('-' * 50)
         response = requests.request(
             "GET", self.licStatus,json=payload, headers=self.auth.generatePaysprintAuthHeaders())
+        print('-' * 50)
+        print("Response",response.json())
+        print('-' * 50)
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
