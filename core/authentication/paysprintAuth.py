@@ -14,7 +14,8 @@ class PaySprintAuth:
             "partnerId":"PS001619",
             "reqid":str(requestCounter)
         }, self.paySprintKey, algorithm="HS256")
-        # print(encodedJWT)
+        print(encodedJWT)
+        encodedJWT = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0aW1lc3RhbXAiOjE2NjM3NDc0NzYsInBhcnRuZXJJZCI6IlBTMDAxNjE5IiwicmVxaWQiOiJXRjM0NTEyMyJ9.kr0hdIZTW8LLj7spQyx6DHlHAJ93mlvtjo6ax4EOwro"
         headers = {
             'Token': encodedJWT,
             # 'Content-Type': 'application/json',
