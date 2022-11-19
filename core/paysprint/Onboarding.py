@@ -15,7 +15,11 @@ class Onboarding:
         self.fs = firestore.client()
 
     def onboardingWeb(self,merchantCode:str,mobile:int,is_new:int,email:str,referenceId:str):
-        url = "https://api.paysprint.in/api/v1/service/onboard/onboardnew/getonboardurl"
+        url  = "https://fingpayap.tapits.in/fpaepsweb/api/onboarding/merchant/creation/php/m1"
+        
+
+    def onboardingWebOld(self,merchantCode:str,mobile:int,is_new:int,email:str,referenceId:str):
+        url = "https://api.paysprint.in/api/v1/service/onboard/onboard/getonboardurl"
         merchantCode = {
             "merchantcode": merchantCode,
             "mobile": str(mobile),
@@ -40,7 +44,7 @@ class Onboarding:
             return {"status":400,"message":"Mobile number is required"}, 400
         if not data['merchantcode']:
             return {"status":400,"message":"Merchant code is required"}, 400
-        data['pipe'] = 'bank1'
+        data['pipe'] = 'bank2'
         self.logging.info(data)
         response = requests.post(url, json=data,headers=self.auth.generatePaysprintAuthHeaders())
         return response.json(), response.status_code

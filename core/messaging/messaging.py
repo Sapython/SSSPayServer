@@ -1,13 +1,14 @@
 import requests
 import re
+import urllib
 class Messaging:
     def __init__(self):
         """
         The function __init__() is a special method, called as class constructor or initialization
         method that Python calls when you create a new instance of this class
         """
-        self.user = 'pay123'
-        self.password = '321654'
+        self.user = 'Sethsumit31'
+        self.password = 'Sbi@123'
         self.senderId = 'SSSPAY'
     
     def sendSingleSMS(self,message:str,mobileNo:int,priority='ndnd'):
@@ -21,20 +22,22 @@ class Messaging:
         :param priority: ndnd or dnd, defaults to ndnd (optional)
         :return: The response object
         """
+        # encode message to url format
+        print("before",message)
+        message = urllib.parse.quote(message)
+        print("after",message)
         smsType = 'normal'
+        templateId = "1207161883476515597"
+        dltId = '1201161855222539289'
         if (len(str(mobileNo))!=10):
             raise Exception('Invalid Mobile Number')
             return
         elif (len(str(message))>260):
             raise Exception('Message is too long')
             return
-        elif (priority !='ndnd' and priority != 'dnd'):
-            raise Exception('Not a valid priority')
-            return
-        elif (smsType !='normal' and smsType != 'flash'):
-            raise Exception('Not a valid sms type')
-            return
-        return requests.get(f'http://trans.smsfresh.co/api/sendmsg.php?user={self.user}&pass={self.password}&sender={self.senderId}&phone={str(mobileNo)}&text={message}&priority={priority}&stype={smsType}')
+            # http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID=#USSERID#&Password=#Password#&SenderID=#SENDERID#&Phno=#PHONE#&Msg=#MSG#&EntityID=#EntityID#&TemplateID=#TEMPLATEID#
+        print(f'http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID={self.user}&Password={self.password}&SenderID={self.senderId}&Phno={str(mobileNo)}&Msg={message}&EntityID={dltId}')
+        return requests.get(f'http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID={self.user}&Password={self.password}&SenderID={self.senderId}&Phno={str(mobileNo)}&Msg={message}&EntityID={dltId}&TemplateId={templateId}')
     
     def sendMultiSMS(self,message:str,mobileNos:list,priority="dnd"):
         """

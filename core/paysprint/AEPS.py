@@ -52,17 +52,67 @@ class AEPS:
             'referenceno':str(referenceNo),
             'ipaddress':self.ipaddress,
             'adhaarnumber':str(adhaarNumber),
+            'accessmodetype':'APP',
+            'nationalbankidentification':nationalBankIdentification,
+            'requestremarks':str(requestRemarks),
+            'data':authData,
+            'pipe':'bank2',
+            'timestamp':str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+            "transactiontype":'BE',
+            "submerchantid":merchantCode,
+            "is_iris":is_iris
+        }
+        print("Request",data)
+        self.logging.info("aepsData "+str(data))
+        encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
+        payload = {
+            "body":encoded
+        }
+        self.logging.info(payload)
+        headers = self.auth.generatePaysprintAuthHeaders()
+        response = requests.post("https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index",data=payload,headers=headers)
+        print("Response",response.json())
+        return response.json(), response.status_code
+
+    def getBalanceEnquiryTest(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,is_iris:str,merchantCode:str):
+        if not latitude:
+            return {'message': 'Missing latitude'}, 400
+        if not longitude:
+            return {'message': 'Missing longitude'}, 400
+        if not mobile_number:
+            return {'message': 'Missing mobile_number'}, 400
+        if not referenceNo:
+            return {'message': 'Missing referenceNo'}, 400
+        if not adhaarNumber:
+            return {'message': 'Missing adhaarNumber'}, 400
+        if not nationalBankIdentification:
+            return {'message': 'Missing nationalBankIdentification'}, 400
+        if not authData:
+            return {'message': 'Missing authData'}, 400
+        if not merchantCode:
+            return {'message': 'Missing merchantCode'}, 400
+        # if (is_iris):
+        #     is_iris= 'Yes'
+        # elif (is_iris==False):
+        #     is_iris= 'No'
+        # else:
+        #     return {'message': 'Missing is_iris'}, 400
+        data = {
+            'latitude':str(latitude),
+            'longitude':str(longitude),
+            'mobilenumber':str(mobile_number),
+            'referenceno':str(referenceNo),
+            'ipaddress':self.ipaddress,
+            'adhaarnumber':str(adhaarNumber),
             'accessmodetype':'SITE',
             'nationalbankidentification':nationalBankIdentification,
             'requestremarks':str(requestRemarks),
             'data':authData,
-            'pipe':'bank1',
+            'pipe':'bank2',
             'timestamp':str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
             "transactiontype":'BE',
             "submerchantid":merchantCode,
-            "is_iris":is_iris,
-            "key":"",
-            "iv":""
+            "is_iris":is_iris
         }
         print("Request",data)
         self.logging.info("aepsData "+str(data))
@@ -105,7 +155,7 @@ class AEPS:
             'nationalbankidentification':str(nationalBankIdentification),
             'requestremarks':str(requestRemarks),
             'data':authData,
-            'pipe':'bank1',
+            'pipe':'bank2',
             'timestamp':str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
             "transactiontype":'CW',
             "submerchantid":merchantCode,
@@ -153,7 +203,7 @@ class AEPS:
             'nationalbankidentification':nationalBankIdentification,
             'requestremarks':requestRemarks,
             'data':authData,
-            'pipe':'bank1',
+            'pipe':'bank2',
             'timestamp':datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "transactiontype":"MS",
             "submerchantid":merchantCode,
@@ -240,7 +290,7 @@ class AEPS:
             'requestremarks':requestRemarks,
             'amount':1,
             'data':authData,
-            'pipe':'bank1',
+            'pipe':'bank2',
             'timestamp':datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "transactiontype":"MS",
             "submerchantid":merchantCode,

@@ -3,17 +3,17 @@ SSSPay payment server
 """
 import logging
 import os
-import sys
 import time
 
 import firebase_admin
 import google.cloud.logging
 import requests
 from firebase_admin import auth, credentials
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from core.authentication.auth import Authentication
+from core.authentication.paysprintAuth import PaySprintAuth
 from core.authentication.userManagement import UserManagement
 from core.helpers.Qr import QR
 from core.helpers.Transaction import Transaction
@@ -61,7 +61,7 @@ qr = QR(DEVELOPMENT)
 onboarding = Onboarding(app,logging)
 upi = UPI(app)
 HLR_WORKING = False
-
+paysprintAuth = PaySprintAuth(app)
 
 def authorize():
     if DEVELOPMENT:
@@ -86,7 +86,9 @@ def test():
     # get current IP
     service = os.environ.get('K_SERVICE', 'Unknown service')
     revision = os.environ.get('K_REVISION', 'Unknown revision')
-    return jsonify({"ip": requests.get('http://checkip.dyndns.org/').text, "service": service, "revision": revision, "version": 2, "development": DEVELOPMENT})
+    res= requests.get('http://checkip.dyndns.org/').text
+    status = requests.get('https://api.paysprint.in/api/v1/service/balance/balance/authenticationcheck',headers = paysprintAuth.generatePaysprintAuthHeaders()).text
+    return jsonify({"ip": res, "service": service, "revision": revision, "version": 2, "development": DEVELOPMENT,"status":status})
 
 
 @app.route('/favicon.ico', methods=['POST'])
@@ -1383,6 +1385,43 @@ def getAepsBankList():
             return jsonify({'error': "Some error occurred"}), 400
 
 
+@app.route('/aeps/test/balanceEnquiry',methods=['POST','GET'])
+def testBalanceEnquiry():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    # logging.error(request.json)
+    # return {'responding':True}
+    print(request)
+    print(request.json)
+    if (not request.is_json):
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+    try:
+        print("request.is_json",request.is_json)
+        # logging.info(request.json)
+        response = aeps.getBalanceEnquiry(
+            request.json['latitude'],
+            request.json['longitude'],
+            request.json['mobile_number'],
+            request.json['referenceNo'],
+            request.json['adhaarNumber'],
+            request.json['nationalBankIdentification'],
+            request.json['requestRemarks'],
+            request.json['data'].strip(),
+            request.json['is_iris'],
+            request.json['merchantCode']
+        )
+        # logging.info(response[0])
+        print(response)
+        return response
+    except Exception as e:
+        # logging.error(e)
+        print(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        else:
+            return jsonify({'error': "Some error occurred"}), 400
+
 @app.route('/aeps/balanceEnquiry', methods=['POST'])
 def getAepsBalanceEnquiry():
     auth = authorize()
@@ -1410,18 +1449,18 @@ def getAepsBalanceEnquiry():
             mainTransactionData['merchantCode']
         )
         print(response)
-        logging.info(response)
+        # logging.info(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             return response
         else:
-            logging.error(response[0])
+            # logging.error(response[0])
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        logging.error(e)
+        # logging.error(e)
         print(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1504,7 +1543,7 @@ def miniStatement():
         print(response)
         # logging.info(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
-            message = 'Balance Enquiry is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:
@@ -1512,7 +1551,7 @@ def miniStatement():
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        logging.error(e)
+        # logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1773,6 +1812,15 @@ def qrStatus():
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
+
+@app.route('/sms/send',methods=['POST','GET'])
+def sendSMS():
+    res = messaging.sendSingleSMS("Test message","9517457296","ndnd")
+    print(res)
+    if (res):
+        print(res.content)
+    return "DONE"
+
 
 if __name__ == '__main__':
     server_port = os.environ.get('PORT', '8081')
