@@ -6,7 +6,7 @@ import os
 import time
 
 import firebase_admin
-import google.cloud.logging
+## import google.cloud.logging
 import requests
 from firebase_admin import auth, credentials
 from flask import Flask, jsonify, request, send_from_directory
@@ -37,8 +37,8 @@ cred = credentials.Certificate(
     "keys/ssspay-prod-firebase-adminsdk-ouiri-dffb470966.json")
 DEVELOPMENT = True
 firebase_admin.initialize_app(cred)
-client = google.cloud.logging.Client()
-client.setup_logging()
+## client = google.cloud.logging.Client()
+## client.setup_logging()
 
 # pylint: disable=C0103
 app = Flask(__name__)
@@ -70,10 +70,10 @@ def authorize():
         try:
             return authService.verifyToken(request.json)
         except Exception as e:
-            logging.warning(e)
+            ## logging.warning(e)
             return {'error': 'Invalid token'}, 400
     else:
-        logging.warning('No token')
+        ## logging.warning('No token')
         return {'error': 'No token'}, 400
 
 
@@ -136,7 +136,7 @@ def addWalletBalance():
             wallet.add_balance(request.json['uid'], request.json['amount'])
             return {"success": "Balance added successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -159,7 +159,7 @@ def deductWalletBalance():
             wallet.deduct_balance(request.json['uid'], request.json['amount'])
             return {"success": "Balance deducted successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -188,7 +188,7 @@ def createPayOutContact():
             payout.createAccount(request.json)
             return {"success": "Account created successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -206,7 +206,7 @@ def getAllPayoutContacts():
             accounts = payout.getAllAccounts()
             return {"accounts": accounts}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -226,7 +226,7 @@ def getPayoutContact():
             account = payout.getAccount(request.json['accountId'])
             return {"account": account}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -255,7 +255,7 @@ def updatePayoutContact():
             payout.updateAccount(request.json)
             return {"success": "Account updated successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -275,7 +275,7 @@ def activatePayoutContact():
             payout.activateAccount(request.json['accountId'])
             return {"success": "Account activated successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -295,7 +295,7 @@ def deactivatePayoutContact():
             payout.deactivateAccount(request.json['accountId'])
             return {"success": "Account deactivated successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -334,7 +334,7 @@ def connectFundAccount():
             payout.connectFundAccount(request.json)
             return {"success": "Account connected successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -352,7 +352,7 @@ def getAllFundAccounts():
             accounts = payout.getAllFundAccounts()
             return {"accounts": accounts}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -372,7 +372,7 @@ def getFundAccountById():
             account = payout.getFundAccountById(request.json['accountId'])
             return {"account": account}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -404,7 +404,7 @@ def createPayout():
             payout.createPayout(request.json)
             return {"success": "Payout created successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -424,7 +424,7 @@ def getAllPayouts():
             payouts = payout.getAllPayouts(request.json['account_number'])
             return {"payouts": payouts}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -444,7 +444,7 @@ def getPayoutById():
             payout = payout.getPayoutById(request.json['payout_id'])
             return {"payout": payout}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -464,7 +464,7 @@ def cancelQueuedPayout():
             payout.cancelQueuedPayout(request.json['payout_id'])
             return {"success": "Payout cancelled successfully"}
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -528,26 +528,26 @@ def expressPayout():
                 transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
             # print("ACTUAL RESPONSE", responseData)
             if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
-                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is pending. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.pendingTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
                 return {"queued": "Payout created successfully","data":responseData}, 200
             elif (responseData[0]['status'] == 'processed'):
-                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
                 return {"success": "Payout created successfully","data":responseData}, 200
             elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
-                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.pendingTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
                 return {"failed": "Payout cancelled","data":responseData}, 200
             return responseData, 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -608,24 +608,24 @@ def completeDailyPayout():
                 transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
             print("ACTUAL RESPONSE", responseData)
             if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
-                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is pending. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.pendingTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
             elif (responseData[0]['status'] == 'processed'):
-                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
             elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
-                message = 'LPG payment of amount '+str(transactionValue['amount'])+' for ' + str(
+                message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.pendingTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
                 return {"success": "Payout created successfully"}
             return responseData
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -646,14 +646,14 @@ def sendSingleSMS():
             message = request.json['message']
             priority = request.json['priority']
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
         try:
             response = messaging.sendSingleSMS(message, phoneNo, priority)
             print(response.text)
             return jsonify({'success': response.text}), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -670,13 +670,13 @@ def sendMultipleSMS():
             message = request.json['message']
             priority = request.json['priority']
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
         try:
             response = messaging.sendMultiSMS(message, phoneNo, priority)
             return jsonify({'success': response.text}), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -694,14 +694,14 @@ def scheduleSMS():
             priority = request.json['priority']
             schedule = request.json['schedule']
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': 'SMS request should contain phone number without (+91), message (<260 Chars) and priority (dnd/ndnd)' + e}), 400
         try:
             response = messaging.scheduleSMS(
                 message, phoneNo, schedule, priority)
             return jsonify({'success': response.text}), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -716,7 +716,7 @@ def getSMSBalance():
         response = messaging.getBalance()
         return jsonify({'success': response}), 200
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         return jsonify({'error': str(e)}), 400
 
 
@@ -729,7 +729,7 @@ def getMobileOperatorDetail():
         response = messaging.getMobileOperatorDetail()
         return jsonify({'success': response}), 200
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         return jsonify({'error': str(e)}), 400
 
 # LPG services
@@ -745,7 +745,7 @@ def getLpgOperatorList():
         response = LpgInstance.getOperatorList(mode='online')
         return jsonify(response), 200
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         return jsonify({'error': str(e)}), 400
 
 
@@ -759,13 +759,13 @@ def fetchLpgDetails():
             caNumber = request.json['customerNumber']
             operatorNo = request.json['operatorNumber']
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': "Please provide a customerNumber and operatorNumber ", "mainError": str(e)}), 400
         try:
             response = LpgInstance.fetchLpgDetails(caNumber, operatorNo)
             return response[0], response[1]
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -788,7 +788,7 @@ def rechargeLpg():
             latitude = transaction['extraData']['latitude']
             longitude = transaction['extraData']['longitude']
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 print("Error ", e)
                 return jsonify({"mainError": str(e)}), 400
@@ -804,7 +804,7 @@ def rechargeLpg():
                     request.json['uid'], request.json['transactionId'], message, 'lpg', response)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
 
     else:
@@ -825,7 +825,7 @@ def LpgStatusInquiry():
             response = LpgInstance.getLpgRechargeStatus(referenceId)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -845,7 +845,7 @@ def getCustomerInfo():
             response = HlrInstance.getOperator(number, opType)
             return response
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 print(e)
                 return jsonify({'error': str(e)}), 400
@@ -867,7 +867,7 @@ def getDthInfo():
             print("dth response", response)
             return response
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -885,7 +885,7 @@ def getMobilePlan():
             response = HlrInstance.getPlanInfo(circle, operator)
             return response
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -903,7 +903,7 @@ def getOperatorsList():
         response = RechargeInstance.getOperatorList()
         return jsonify(response), 200
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         return jsonify({'error': str(e)}), 400
 
 
@@ -944,7 +944,7 @@ def doRecharge():
                   time.time() - startTime, time.time(), 'Time')
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -961,7 +961,7 @@ def statusEnquiry():
             response = RechargeInstance.getStatusEnquiry(referenceId)
             return response, 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -985,7 +985,7 @@ def getBillOperators():
             print("response", response)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1007,7 +1007,7 @@ def fetchBill():
             print(response)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1040,7 +1040,7 @@ def payBill():
                     request.json['uid'], request.json['transactionId'], message, 'bbps', response)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1057,7 +1057,7 @@ def billStatusEnquiry():
             response = BillPaymentInstance.statusEnquiry(referenceId)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1082,7 +1082,7 @@ def fetchLicBill():
             response = LicInstance.fetchLicBill(caNumber, email, mode)
             return response
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1115,7 +1115,7 @@ def payLicBill():
                     request.json['uid'], request.json['transactionId'], message, 'lic', response)
             return response
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             print(e)
             return jsonify({'error': str(e)}), 400
     else:
@@ -1133,7 +1133,7 @@ def LicStatus():
             response = LicInstance.getLicStatus(referenceId)
             return response
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1151,7 +1151,7 @@ def getFastTagOperatorList():
             response = FastTagInstance.getOperatorsList()
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1171,7 +1171,7 @@ def fastTagDetails():
                 operatorNo, caNumber)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1205,7 +1205,7 @@ def rechargeFastTag():
                     request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
 
 
@@ -1220,7 +1220,7 @@ def getFastTagStatus():
             response = FastTagInstance.getFastTagStatus(referenceId)
             return jsonify(response), 200
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1238,7 +1238,7 @@ def getAccountReferralLink():
         print(response)
         return jsonify(response), 200
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         return jsonify({'error': str(e)}), 400
 
 # Admin Services
@@ -1257,7 +1257,7 @@ def blockUser():
             print(statement)
             return statement
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return jsonify({'error': str(e)}), 400
             return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1272,7 +1272,7 @@ def unblockUser():
         try:
             return userManagement.unblockUser(request.json['uid'], request.json['blockID'])
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return jsonify({'error': str(e)}), 400
             return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1288,7 +1288,7 @@ def deleteUser():
             userName = request.json
             return userManagement.deleteUser(request.json['uid'], request.json['deleteUserId'])
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return jsonify({'error': str(e)}), 400
             return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1311,7 +1311,7 @@ def changeAccess():
             print("statement", statement)
             return statement
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             if DEVELOPMENT:
                 return jsonify({'error': str(e)}), 400
             return jsonify({'error': "An error occurred "}), 400
@@ -1329,7 +1329,7 @@ def createUser():
             print(request.json)
             return userManagement.createUser(request.json)
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             print(e)
             if DEVELOPMENT:
                 return jsonify({'error': str(e)}), 400
@@ -1348,7 +1348,7 @@ def getTransactions():
             print(request.json)
             return transactionInstance.getTransactions(request.json['type'], request.json['startDate'], request.json['endDate'])
         except Exception as e:
-            logging.error(e)
+            ## logging.error(e)
             print(e)
             if DEVELOPMENT:
                 return jsonify({'error': str(e)}), 400
@@ -1378,7 +1378,7 @@ def getAepsBankList():
                 return jsonify({'error': response.json()['message']}), 400
             return jsonify({'error': "Cannot fetch bank list."}), 400
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         else:
@@ -1390,7 +1390,7 @@ def testBalanceEnquiry():
     auth = authorize()
     if(auth[1] != 200):
         return jsonify(auth[0]), auth[1]
-    # logging.error(request.json)
+    #logging.error(request.json)
     # return {'responding':True}
     print(request)
     print(request.json)
@@ -1398,7 +1398,7 @@ def testBalanceEnquiry():
         return jsonify({'error': "We didn't received your data in json format "}), 400
     try:
         print("request.is_json",request.is_json)
-        # logging.info(request.json)
+        #logging.info(request.json)
         response = aeps.getBalanceEnquiry(
             request.json['latitude'],
             request.json['longitude'],
@@ -1411,11 +1411,11 @@ def testBalanceEnquiry():
             request.json['is_iris'],
             request.json['merchantCode']
         )
-        # logging.info(response[0])
+        #logging.info(response[0])
         print(response)
         return response
     except Exception as e:
-        # logging.error(e)
+        #logging.error(e)
         print(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1449,18 +1449,18 @@ def getAepsBalanceEnquiry():
             mainTransactionData['merchantCode']
         )
         print(response)
-        # logging.info(response)
+        ## logging.info(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             return response
         else:
-            # logging.error(response[0])
+            #logging.error(response[0])
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        # logging.error(e)
+        #logging.error(e)
         print(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1497,18 +1497,16 @@ def getAepsCashWithDrawl():
             mainTransactionData['extraData']['merchantCode']
         )
         print(response[0])
-        logging.info(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
-            message = 'Cash Withdrawal for  ' + str(response[0]['clientrefno']) + ' of ' + str(transactionData['amount']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
+            wallet.add_balance(jsonData['uid'], mainTransactionData['amount'])
+            message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
             return response
         else:
-            logging.error(response)
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1541,7 +1539,7 @@ def miniStatement():
             mainTransactionData['merchantCode']
         )
         print(response)
-        # logging.info(response)
+        #logging.info(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
@@ -1551,7 +1549,7 @@ def miniStatement():
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        # logging.error(e)
+        #logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1569,15 +1567,14 @@ def getWithdrawStatus():
         response = aeps.getCashWithdrawStatus(jsonData['referenceNo'])
         print(response)
         if (response[1] == 200 and response[0]['response_code'] == 1):
-            logging.info(response)
             return response
         else:
-            logging.error(response[0])
+            ## logging.error(response[0])
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1596,15 +1593,15 @@ def withdrawThreeWay():
             jsonData['reference'], jsonData['status'])
         print(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
-            logging.info(response)
+            ## logging.info(response)
             return response
         else:
-            logging.error(response)
+            ## logging.error(response)
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1637,7 +1634,7 @@ def aadhaarPay():
             mainTransactionData['merchantCode']
         )
         print(response)
-        # logging.info(response)
+        #logging.info(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
@@ -1647,7 +1644,7 @@ def aadhaarPay():
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1667,12 +1664,12 @@ def aadhaarPayStatus():
         if (response[0]['response_code'] == 1 and response[1] == 200):
             return response
         else:
-            logging.error(response)
+            ## logging.error(response)
             if DEVELOPMENT:
                 return jsonify({'error': response.json()['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1694,7 +1691,7 @@ def registerQr():
         #         return jsonify({'error': response.json()['message']}), 400
         #     return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1711,7 +1708,7 @@ def onboardingSetup():
             return jsonify({'error': "We didn't received your data in json format "}), 400
         getUser = transactionInstance.getUser(request.json['uid'])
         print(getUser)
-        # logging.error(getUser)
+        #logging.error(getUser)
         response = onboarding.onboardingWeb(
             getUser['userId'],
             getUser['phoneNumber'],
@@ -1720,10 +1717,10 @@ def onboardingSetup():
             request.json['uid'],
         )
         print(response)
-        logging.error(response)
+        ## logging.error(response)
         return response, 200
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "Some error occurred"}), 400
@@ -1739,13 +1736,13 @@ def checkOnboardingStatus():
             return jsonify({'error': "We didn't received your data in json format "}), 400
         getUser = transactionInstance.getUser(request.json['uid'])
         print(getUser)
-        # logging.error(getUser)
+        #logging.error(getUser)
         response = onboarding.checkStatus(request.json)
         print(response)
-        logging.error(response)
+        ## logging.error(response)
         return response
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "Some error occurred"}), 400
@@ -1762,7 +1759,7 @@ def onboardingCallback():
     #         print(response)
     #         return response
     # except Exception as e:
-    # logging.error(e)
+    #logging.error(e)
     #     if DEVELOPMENT:
     #         return jsonify({'error': e}), 400
     #     return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1786,7 +1783,7 @@ def createPayment():
         # print(response)
         return response, 200
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': e}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1808,14 +1805,14 @@ def qrStatus():
             transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
             return response.json(), 400
     except Exception as e:
-        logging.error(e)
+        ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
 @app.route('/sms/send',methods=['POST','GET'])
 def sendSMS():
-    res = messaging.sendSingleSMS("Test message","9517457296","ndnd")
+    res = messaging.sendSingleSMS("123456 is your OTP for Login. OTP valid for 10 minutes. Regards SSSPAY","9517457296","ndnd")
     print(res)
     if (res):
         print(res.content)

@@ -10,7 +10,7 @@ class AEPS:
         super().__init__()
         self.__aeps_url = "https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index"
         self.encryption = Encrypt()
-        self.logging = logging
+        # self.logging = logging
         self.auth = PaySprintAuth(app)
         self.subMerchantId = "PS001619"
         self.ipaddress = "34.126.221.178"
@@ -63,12 +63,12 @@ class AEPS:
             "is_iris":is_iris
         }
         print("Request",data)
-        self.logging.info("aepsData "+str(data))
+        # self.logging.info("aepsData "+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded
         }
-        self.logging.info(payload)
+        # self.logging.info(payload)
         headers = self.auth.generatePaysprintAuthHeaders()
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index",data=payload,headers=headers)
         print("Response",response.json())
@@ -115,12 +115,12 @@ class AEPS:
             "is_iris":is_iris
         }
         print("Request",data)
-        self.logging.info("aepsData "+str(data))
+        # self.logging.info("aepsData "+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded
         }
-        self.logging.info(payload)
+        # self.logging.info(payload)
         headers = self.auth.generatePaysprintAuthHeaders()
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index",data=payload,headers=headers)
         print("Response",response.json())
@@ -165,12 +165,12 @@ class AEPS:
         print('-'*20)
         print('Request',data)
         print('-'*20)
-        self.logging.info("aepsData"+str(data))
+        # self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded
         }
-        self.logging.info(payload)
+        # self.logging.info(payload)
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/cashwithdraw/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
         print('-'*20)
         print('Response',response.json())
@@ -214,13 +214,13 @@ class AEPS:
         print('-'*20)
         print("DataDump",json.dumps(data).encode('utf-8'),type(json.dumps(data).encode('utf-8')))
         if self.development: print("DATA",data)
-        self.logging.info("aepsData"+str(data))
+        # self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded
         }
         if self.development: print(payload)
-        # self.logging.info(payload)    
+        self.logging.info(payload)    
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/ministatement/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
         print('-'*20)
         print('Response',response.json())
@@ -233,12 +233,12 @@ class AEPS:
         data = {
             'reference':referenceNo
         }
-        self.logging.info("aepsData"+str(data))
+        # self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded
         }
-        self.logging.info(payload)
+        # self.logging.info(payload)
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/aepsquery/query",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
         logging.info(response)
         print("Response:",response)
@@ -253,13 +253,13 @@ class AEPS:
             'reference':referenceId,
             'status':status
         }
-        self.logging.info("aepsData"+str(data))
+        # self.logging.info("aepsData"+str(data))
         print("DATA",data)
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded
         }
-        self.logging.info(payload)
+        # self.logging.info(payload)
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/threeway/threeway",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
         return response.json(), response.status_code
     
@@ -298,13 +298,13 @@ class AEPS:
         }
         print("DataDump",json.dumps(data).encode('utf-8'),type(json.dumps(data).encode('utf-8')))
         if self.development: print("DATA",data)
-        self.logging.info("aepsData"+str(data))
+        # self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded
         }
         if self.development: print(payload)
-        # self.logging.info(payload)    
+        self.logging.info(payload)    
         response = requests.post("https://api.paysprint.in/api/v1/service/aadharpay/aadharpay/index",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
         return response.json(), response.status_code
     
