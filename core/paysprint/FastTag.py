@@ -3,7 +3,7 @@ import base64
 import requests
 from core.authentication.encryption import Encrypt
 from core.authentication.paysprintAuth import PaySprintAuth
-class FastTag:
+class FastTag: 
     def __init__(self,app):
         self.auth = PaySprintAuth(app)
         self.operatorListUrl = 'https://api.paysprint.in/api/v1/service/fastag/Fastag/operatorsList'

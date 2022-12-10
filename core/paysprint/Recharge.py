@@ -3,7 +3,7 @@ import requests
 from core.authentication.paysprintAuth import PaySprintAuth
 
 class Recharge:
-    def __init__(self,app):
+    def __init__(self,app):  
         """
         This function is used to initialize the header, operatorListUrl, doRechargeUrl and
         statusEnquiryUrl
@@ -15,9 +15,9 @@ class Recharge:
         :param card_expiration_date: The expiration date of the card. It should be in the format MM/YYYY
         """
         self.auth = PaySprintAuth(app)
-        self.operatorListUrl = 'https://api.paysprint.in/api/v1/service/recharge/recharge/getoperator'
-        self.doRechargeUrl = 'https://api.paysprint.in/api/v1/service/recharge/recharge/dorecharge'
-        self.statusEnquiryUrl = 'https://api.paysprint.in/api/v1/service/recharge/recharge/status'
+        self.operatorListUrl = 'https://api.paysprint.in/api/v1/service/recharge/Recharge_v2/getoperator'
+        self.doRechargeUrl = 'https://api.paysprint.in/api/v1/service/recharge/Recharge_v2/dorecharge'
+        self.statusEnquiryUrl = 'https://api.paysprint.in/api/v1/service/recharge/Recharge_v2/status'
 
     def getOperatorList(self):
         """

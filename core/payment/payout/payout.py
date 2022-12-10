@@ -8,12 +8,16 @@ from core.authentication.paysprintAuth import PaySprintAuth
 
 class Payout:
     def __init__(self, app):
-        self.secretKey = '7od0YTzDp656LZT1qcNop4Nc'
-        self.keyId = 'rzp_test_iXjGFXuZaNQ1Uk'
+        # self.secretKey = '7od0YTzDp656LZT1qcNop4Nc'
+        # self.keyId = 'rzp_test_iXjGFXuZaNQ1Uk'
+        self.keyId = 'rzp_live_tlXdDUmbEQxwf9'
+        self.secretKey = '0bbPbrfVDHYc7gJNgCCbBxdr'
+        self.accountNumberVpa = ""
+        self.accountNumberBank = ""
         self.app = app
         self.createAccountURL = "https://api.razorpay.com/v1/contacts"
         self.fundAccountTypes = ['bank_account', 'vpa', 'card']
-        self.DEVELOPMENT = True
+        self.DEVELOPMENT = False
         self.headers = {
             'Content-Type': 'application/json',
             'Authorization': 'Basic Og=='
@@ -256,7 +260,8 @@ class Payout:
             raise Exception("Invalid payout type")
             return None, None, None
         if requestData['extraData']['accountType'] == 'bank_account':
-            accountNumber = "000405657647"
+            # accountNumber = "000405657647"
+            accountNumber = "4564563801628609"
         elif requestData['extraData']['accountType'] == 'vpa':
             accountNumber = "4564563801628609"
         else:

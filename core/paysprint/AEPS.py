@@ -6,11 +6,11 @@ import datetime
 from core.authentication.encryption import Encrypt
 from core.authentication.paysprintAuth import PaySprintAuth
 class AEPS:
-    def __init__(self,app,logging,development):
+    def __init__(self,app,development):
         super().__init__()
         self.__aeps_url = "https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index"
         self.encryption = Encrypt()
-        # self.logging = logging
+        self.logging = logging
         self.auth = PaySprintAuth(app)
         self.subMerchantId = "PS001619"
         self.ipaddress = "34.126.221.178"
@@ -214,7 +214,7 @@ class AEPS:
         print('-'*20)
         print("DataDump",json.dumps(data).encode('utf-8'),type(json.dumps(data).encode('utf-8')))
         if self.development: print("DATA",data)
-        # self.logging.info("aepsData"+str(data))
+        self.logging.info("aepsData"+str(data))
         encoded = self.encryption.encrypt(json.dumps(data).encode('utf-8'))
         payload = {
             "body":encoded

@@ -29,7 +29,11 @@ from core.paysprint.LPG import LPG
 from core.paysprint.Onboarding import Onboarding
 from core.paysprint.Recharge import Recharge
 from core.paysprint.Upi import UPI
-
+import razorpay
+from firebase_admin import firestore
+from google.cloud.firestore_v1 import Increment
+# client = razorpay.Client(auth=("rzp_test_iXjGFXuZaNQ1Uk", "7od0YTzDp656LZT1qcNop4Nc"))
+client = razorpay.Client(auth=("rzp_live_tlXdDUmbEQxwf9", "0bbPbrfVDHYc7gJNgCCbBxdr"))
 import os
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="keys/ssspay-prod-firebase-adminsdk-ouiri-dffb470966.json"
 
@@ -37,13 +41,14 @@ cred = credentials.Certificate(
     "keys/ssspay-prod-firebase-adminsdk-ouiri-dffb470966.json")
 DEVELOPMENT = True
 firebase_admin.initialize_app(cred)
+fs = firestore.client()
 ## client = google.cloud.logging.Client()
 ## client.setup_logging()
 
 # pylint: disable=C0103
 app = Flask(__name__)
 CORS(app)
-aeps = AEPS(app,logging,DEVELOPMENT)
+aeps = AEPS(app,DEVELOPMENT)
 authService = Authentication(auth, app)
 messaging = Messaging()
 LpgInstance = LPG(app, DEVELOPMENT)
@@ -1539,7 +1544,7 @@ def miniStatement():
             mainTransactionData['merchantCode']
         )
         print(response)
-        #logging.info(response)
+        logging.info(response)
         if (response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
@@ -1549,7 +1554,7 @@ def miniStatement():
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        #logging.error(e)
+        logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1709,7 +1714,7 @@ def onboardingSetup():
         getUser = transactionInstance.getUser(request.json['uid'])
         print(getUser)
         #logging.error(getUser)
-        response = onboarding.onboardingWeb(
+        response = onboarding.onboardingWebOld(
             getUser['userId'],
             getUser['phoneNumber'],
             0,
@@ -1764,6 +1769,19 @@ def onboardingCallback():
     #         return jsonify({'error': e}), 400
     #     return jsonify({'error': "We didn't received your data in json format "}), 400
 
+@app.route('/razorpay/callback', methods=['POST'])
+def razorpayCallback():
+    print(request.json)
+    verifier = "ybiuh83r9823e98uy7B67rF57667TV&rtV8^&T547^Tfdgio384093hniu7^t^&t&^T&t869*789&987u9808K09*90U98yvR54edc43X43dF76v&^T&^"
+    print({"data":request.data.decode(),"type":type(request.data.decode()),"header":request.headers.get('X-Razorpay-Signature'),"verifier":verifier})
+    res = client.utility.verify_webhook_signature(request.data.decode(), request.headers.get('X-Razorpay-Signature'), verifier)
+    print(res)
+    if(res):
+        if (request.json["event"].startswith('payout.')):
+            fs.collection("users").document(request.json["payload"]["payout"]["entity"]["notes"]["userId"]).collection("transaction").document(request.json["payload"]["payout"]["entity"]["reference_id"]).update({"newPayoutStatus":{**request.json["payload"]["payout"]["entity"],"event":request.json["event"]}})
+            if (request.json["event"]=='payout.processed'):
+                fs.collection("users").document(request.json["payload"]["payout"]["entity"]["notes"]["userId"]).collection("wallet").document("wallet").update({"balance":Increment(-((request.json["payload"]["payout"]["entity"]["amount"])/100))})
+    return {"done":True,"status":200}
 
 @app.route('/upi/createPayment', methods=['POST'])
 def createPayment():

@@ -14,7 +14,7 @@ class UserManagement:
         self.encryption = Encrypt()
         self.firestore = firestore.client()
         self.auth = auth
-        self.accessLevels = ['guest', 'retailer', 'distributor',
+        self.accessLevels = ['guest','blocked', 'retailer', 'distributor',
                              'masterDistributor', 'superDistributor', 'admin']
 
     def unblockUser(self, userId, blockedId):
@@ -26,7 +26,7 @@ class UserManagement:
             data = doc.to_dict()
             if data['access']['access'] in ['admin']:
                 self.firestore.collection('users').document(
-                    blockedId).update({u'status': {'access': 'active'}})
+                    blockedId).update({'status': {'access': 'active'},'access': {'access': 'guest'}})
                 self.auth.update_user(blockedId, disabled=False)
                 return {'message': 'User unblocked successfully'}
             else:
@@ -41,7 +41,7 @@ class UserManagement:
             data = doc.to_dict()
             if data['access']['access'] in ['admin']:
                 docRef = self.firestore.collection('users').document(blockId)
-                docRef.update({'status': {'access': 'blocked'}})
+                docRef.update({'status': {'access': 'blocked'},'access':{'access':'blocked'}})
                 self.auth.update_user(blockId, disabled=True)
                 return {'message': 'User blocked successfully'}
             else:
@@ -80,13 +80,10 @@ class UserManagement:
         if doc.exists:
             data = doc.to_dict()
             if accessLevel in self.accessLevels:
-                if (self.accessLevels.index(accessLevel) > self.accessLevels.index(data['access']['access'])):
-                    user.update({
-                        'access': {'access': accessLevel}
-                    })
-                    return {'message': 'Access level changed successfully', 'requestCode': 1}
-                else:
-                    return {'error': 'Access level cannot be changed', 'requestCode': 2}, 200
+                user.update({
+                    'access': {'access': accessLevel}
+                })
+                return {'message': 'Access level changed successfully', 'requestCode': 1}
             else:
                 return {'error': 'Invalid access level requested', 'requestCode': 3}, 400
         else:
