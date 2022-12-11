@@ -1777,7 +1777,7 @@ def razorpayCallback():
     res = client.utility.verify_webhook_signature(request.data.decode(), request.headers.get('X-Razorpay-Signature'), verifier)
     print(res)
     if(res):
-        if (request.json["event"].startswith('payout.')):
+        if (request.json["event"].startswith('payout.') and request.json["event"]!='payout.updated'):
             fs.collection("users").document(request.json["payload"]["payout"]["entity"]["notes"]["userId"]).collection("transaction").document(request.json["payload"]["payout"]["entity"]["reference_id"]).update({"newPayoutStatus":{**request.json["payload"]["payout"]["entity"],"event":request.json["event"]}})
             if (request.json["event"]=='payout.processed'):
                 fs.collection("users").document(request.json["payload"]["payout"]["entity"]["notes"]["userId"]).collection("wallet").document("wallet").update({"balance":Increment(-((request.json["payload"]["payout"]["entity"]["amount"])/100))})
