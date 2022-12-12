@@ -121,7 +121,7 @@ class UserManagement:
         # if not userData['confirmPassword'] == userData['password']:
         #     return {'error': 'Passwords do not match'}, 400
         # generate random password
-        password = ''.join(random.choices(string.ascii_letters + string.digits, k=15))
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         splittedDob = userData['dob'].split('-')
         data = {
             "displayName": userData['displayName'],
@@ -178,7 +178,7 @@ class UserManagement:
                     phone_number = '+91'+userData['phoneNumber']
                 )
                 data['userId'] = user.uid
-                message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY "
+                message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY"
                 self.messaging.sendSingleSMS(message,userData['phoneNumber'])
                 self.firestore.collection('users').document(data['userId']).set(data)
                 return {'message': 'User created successfully',"response_code":1,"newUser":data}

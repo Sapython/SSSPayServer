@@ -42,8 +42,8 @@ class Transaction:
         userData = self.fs.collection('users').document(userId).get().to_dict()
         print(userData)
         if (userData):
-            self.notification.send(
-                message, userData['phoneNumber'], userData['uid'], paymentType)
+            # self.notification.send(
+            #     message, userData['phoneNumber'], userData['uid'], paymentType)
             self.fs.collection(
                 'users').document(userId).collection(
                     'transaction').document(transactionId).update(
@@ -58,8 +58,8 @@ class Transaction:
         startTime = time.time()
         userData = self.fs.collection('users').document(userId).get().to_dict()
         print("userId", userId, "userData", userData)
-        self.notification.send(
-            message, userData['phoneNumber'], userData['userId'], paymentType)
+        # self.notification.send(
+        #     message, userData['phoneNumber'], userData['userId'], paymentType)
         self.fs.collection(
             'users').document(userId).collection(
                 'transaction').document(transactionId).update(
@@ -75,8 +75,8 @@ class Transaction:
         userData = self.fs.collection('users').document(userId).get().to_dict()
         if (userData):
             print(userData)
-            self.notification.send(
-                message, userData['phoneNumber'], userData['userId'], paymentType)
+            # self.notification.send(
+            #     message, userData['phoneNumber'], userData['userId'], paymentType)
             self.fs.collection(
                 'users').document(userId).collection(
                     'transaction').document(transactionId).update(

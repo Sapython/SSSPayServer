@@ -32,9 +32,6 @@ class Messaging:
         if (len(str(mobileNo))!=10):
             raise Exception('Invalid Mobile Number')
             return
-        elif (len(str(message))>260):
-            raise Exception('Message is too long')
-            return
             # http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID=#USSERID#&Password=#Password#&SenderID=#SENDERID#&Phno=#PHONE#&Msg=#MSG#&EntityID=#EntityID#&TemplateID=#TEMPLATEID#
         print(f'http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID={self.user}&Password={self.password}&SenderID={self.senderId}&Phno={str(mobileNo)}&Msg={message}&EntityID={dltId}')
         return requests.get(f'http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID={self.user}&Password={self.password}&SenderID={self.senderId}&Phno={str(mobileNo)}&Msg={message}&EntityID={dltId}&TemplateId={templateId}')
