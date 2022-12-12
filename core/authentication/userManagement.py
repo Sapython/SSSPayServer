@@ -1,16 +1,16 @@
 import datetime
-import json
-import base64
-import requests
+import string
+import random
 from core.authentication.encryption import Encrypt
 from core.authentication.paysprintAuth import PaySprintAuth
 from firebase_admin import firestore
-
+from core.messaging.messaging import Messaging
 
 class UserManagement:
     def __init__(self, auth, app):
         super().__init__()
         self.app = app
+        self.messaging = Messaging()
         self.encryption = Encrypt()
         self.firestore = firestore.client()
         self.auth = auth
@@ -102,6 +102,10 @@ class UserManagement:
             return {'error': 'Missing dob'}, 400
         if not userData['photoURL']:
             return {'error': 'Missing photoURL'}, 400
+        if not userData['aadhaarNumber']:
+            return {'error': 'Missing aadhaarNumber'}, 400
+        if not userData['panNumber']:
+            return {'error': 'Missing panNumber'}, 400
         if not userData['gender']:
             return {'error': 'Missing gender'}, 400
         if not userData['access']:
@@ -114,8 +118,10 @@ class UserManagement:
             return {'error': 'Missing pincode'}, 400
         if not userData['address']:
             return {'error': 'Missing address'}, 400
-        if not userData['confirmPassword'] == userData['password']:
-            return {'error': 'Passwords do not match'}, 400
+        # if not userData['confirmPassword'] == userData['password']:
+        #     return {'error': 'Passwords do not match'}, 400
+        # generate random password
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=15))
         splittedDob = userData['dob'].split('-')
         data = {
             "displayName": userData['displayName'],
@@ -134,9 +140,9 @@ class UserManagement:
             "city": userData['city'],
             "pincode": userData['pincode'],
             "address": userData['address'],
-            "aadhaarNumber": "",
+            "aadhaarNumber": userData['aadhaarNumber'],
             "tutorialCompleted": False,
-            "panCardNumber": "",
+            "panCardNumber": userData['panNumber'],
             "qrCode": "",
             "onboardingDone": False,
             "payoutDetailsCompleted": False,
@@ -165,13 +171,15 @@ class UserManagement:
                 user = self.auth.create_user(
                     email = userData['email'],
                     email_verified = False,
-                    password = userData['password'],
+                    password = password,
                     display_name = userData['displayName'],
                     photo_url = userData['photoURL'],
                     disabled = False,
                     phone_number = '+91'+userData['phoneNumber']
                 )
                 data['userId'] = user.uid
+                message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY "
+                self.messaging.sendSingleSMS(message,userData['phoneNumber'])
                 self.firestore.collection('users').document(data['userId']).set(data)
                 return {'message': 'User created successfully',"response_code":1,"newUser":data}
         else:

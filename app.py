@@ -807,6 +807,7 @@ def rechargeLpg():
                     operatorNo) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'lpg', response)
+                wallet.deduct_balance(request.json['uid'], amount)
             return jsonify(response), 200
         except Exception as e:
             ## logging.error(e)
@@ -945,6 +946,7 @@ def doRecharge():
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'recharge', response)
+                wallet.deduct_balance(request.json['uid'], amount)
             print("recharge response", response,
                   time.time() - startTime, time.time(), 'Time')
             return jsonify(response), 200
@@ -1043,6 +1045,7 @@ def payBill():
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'bbps', response)
+                wallet.deductBalance(request.json['uid'], amount)
             return jsonify(response), 200
         except Exception as e:
             ## logging.error(e)
@@ -1118,6 +1121,7 @@ def payLicBill():
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'lic', response)
+                wallet.deduct_balance(request.json['uid'], amount)
             return response
         except Exception as e:
             ## logging.error(e)
@@ -1208,6 +1212,7 @@ def rechargeFastTag():
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+                wallet.deduct_balance(request.json['uid'], amount)
             return jsonify(response), 200
         except Exception as e:
             ## logging.error(e)
@@ -1780,7 +1785,7 @@ def razorpayCallback():
         if (request.json["event"].startswith('payout.')):
             fs.collection("users").document(request.json["payload"]["payout"]["entity"]["notes"]["userId"]).collection("transaction").document(request.json["payload"]["payout"]["entity"]["reference_id"]).update({"newPayoutStatus":{**request.json["payload"]["payout"]["entity"],"event":request.json["event"]}})
             if (request.json["event"]=='payout.processed'):
-                fs.collection("users").document(request.json["payload"]["payout"]["entity"]["notes"]["userId"]).collection("wallet").document("wallet").update({"balance":Increment(-((request.json["payload"]["payout"]["entity"]["amount"])/100))})
+                wallet.deduct_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],request.json["payload"]["payout"]["entity"]["amount"]/100)
     return {"done":True,"status":200}
 
 @app.route('/upi/createPayment', methods=['POST'])
