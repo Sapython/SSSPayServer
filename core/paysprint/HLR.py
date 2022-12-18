@@ -9,7 +9,7 @@ class HLR:
         self.token = ''
         self.authorizedKey = ''
         self.auth = PaySprintAuth(app)
-        self.developmentMode = developmentMode
+        self.developmentMode = False
         self.hlrUrl = 'https://api.paysprint.in/api/v1/service/recharge/hlrapi/hlrcheck'
         self.dthInfoUrl = 'https://api.paysprint.in/api/v1/service/recharge/hlrapi/dthinfo'
         self.browsePlanUrl = 'https://api.paysprint.in/api/v1/service/recharge/hlrapi/browseplan'
@@ -17,9 +17,10 @@ class HLR:
 
     def getOperator(self, number: int, operatorType: str):
         payload = json.dumps({"number": number, "type": operatorType})
+        print(payload)
         response = requests.request(
             "POST", self.hlrUrl, headers=self.auth.generatePaysprintAuthHeaders(), data=payload)
-        # print(response.json())
+        print(response.json())
         if (response.json()['response_code'] == 1):
             return response.json()
         else:
@@ -52,9 +53,10 @@ class HLR:
 
     def getPlanInfo(self, circle: int, operator: str):
         payload = {"circle": circle, "op": operator}
+        print(payload)
         response = requests.request(
             "POST", self.browsePlanUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
-        # print('90900',response.json())
+        print(response.json())
         if (response.json()['response_code'] == 1):
             return response.json(), 200
         else:

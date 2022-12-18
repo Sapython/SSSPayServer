@@ -15,9 +15,9 @@ class Recharge:
         :param card_expiration_date: The expiration date of the card. It should be in the format MM/YYYY
         """
         self.auth = PaySprintAuth(app)
-        self.operatorListUrl = 'https://api.paysprint.in/api/v1/service/recharge/Recharge_v2/getoperator'
-        self.doRechargeUrl = 'https://api.paysprint.in/api/v1/service/recharge/Recharge_v2/dorecharge'
-        self.statusEnquiryUrl = 'https://api.paysprint.in/api/v1/service/recharge/Recharge_v2/status'
+        self.operatorListUrl = 'https://api.paysprint.in/api/v1/service/recharge/recharge/getoperator'
+        self.doRechargeUrl = 'https://api.paysprint.in/api/v1/service/recharge/recharge/dorecharge'
+        self.statusEnquiryUrl = 'https://api.paysprint.in/api/v1/service/recharge/recharge/status'
 
     def getOperatorList(self):
         """
@@ -26,7 +26,7 @@ class Recharge:
         """
         response = requests.request(
             "POST", self.operatorListUrl, headers=self.auth.generatePaysprintAuthHeaders())
-        # print(response.json())
+        print(response.json())
         if (response.json()['responsecode'] == 1):
             return response.json()
         else:

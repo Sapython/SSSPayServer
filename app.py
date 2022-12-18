@@ -1,6 +1,8 @@
 """
 SSSPay payment server
 """
+
+version = "1.0.0"
 import logging
 import os
 import time
@@ -32,6 +34,12 @@ from core.paysprint.Upi import UPI
 import razorpay
 from firebase_admin import firestore
 from google.cloud.firestore_v1 import Increment
+import builtins
+import traceback
+def print(*objs, **kwargs):
+    my_prefix = "VER: "+version
+    builtins.print(my_prefix, *objs, **kwargs)
+
 # client = razorpay.Client(auth=("rzp_test_iXjGFXuZaNQ1Uk", "7od0YTzDp656LZT1qcNop4Nc"))
 client = razorpay.Client(auth=("rzp_live_tlXdDUmbEQxwf9", "0bbPbrfVDHYc7gJNgCCbBxdr"))
 import os
@@ -547,12 +555,16 @@ def expressPayout():
             elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
                 message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-                transactionInstance.pendingTransaction(
+                transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
                 return {"failed": "Payout cancelled","data":responseData}, 200
             return responseData, 200
         except Exception as e:
             ## logging.error(e)
+            message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
+                    transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -625,11 +637,13 @@ def completeDailyPayout():
             elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
                 message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-                transactionInstance.pendingTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
                 return {"success": "Payout created successfully"}
             return responseData
         except Exception as e:
+            message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
+                transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
             ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
@@ -808,9 +822,18 @@ def rechargeLpg():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'lpg', response)
                 wallet.deduct_balance(request.json['uid'], amount)
+            else:
+                message = 'LPG payment of amount '+str(amount)+' for ' + str(caNumber) + ' for operator ' + str(
+                    operatorNo) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'lpg', response)
             return jsonify(response), 200
         except Exception as e:
             ## logging.error(e)
+            message = 'LPG payment of amount '+str(amount)+' for ' + str(caNumber) + ' for operator ' + str(
+                    operatorNo) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+            transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'lpg', response)
             return jsonify({'error': str(e)}), 400
 
     else:
@@ -905,12 +928,7 @@ def getOperatorsList():
     auth = authorize()
     if(auth[1] != 200):
         return jsonify(auth[0]), auth[1]
-    try:
-        response = RechargeInstance.getOperatorList()
-        return jsonify(response), 200
-    except Exception as e:
-        ## logging.error(e)
-        return jsonify({'error': str(e)}), 400
+    return RechargeInstance.getOperatorList()
 
 
 @app.route('/recharge/doRecharge', methods=['POST'])
@@ -947,10 +965,19 @@ def doRecharge():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'recharge', response)
                 wallet.deduct_balance(request.json['uid'], amount)
-            print("recharge response", response,
-                  time.time() - startTime, time.time(), 'Time')
+            else:
+                message = 'Recharge of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'recharge', response)
+            print("recharge response", response,time.time() - startTime, time.time(), 'Time')
+            
             return jsonify(response), 200
         except Exception as e:
+            message = 'Recharge of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+            transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'recharge', response)
             ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
@@ -1046,8 +1073,17 @@ def payBill():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'bbps', response)
                 wallet.deductBalance(request.json['uid'], amount)
+            else:
+                message = 'Bill payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'bbps', response)
             return jsonify(response), 200
         except Exception as e:
+            message = 'Bill payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+            transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'bbps', response)
             ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
@@ -1122,8 +1158,17 @@ def payLicBill():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'lic', response)
                 wallet.deduct_balance(request.json['uid'], amount)
+            else:
+                message = 'Lic payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'lic', response)
             return response
         except Exception as e:
+            message = 'Lic payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+            transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'lic', response)
             ## logging.error(e)
             print(e)
             return jsonify({'error': str(e)}), 400
@@ -1213,8 +1258,17 @@ def rechargeFastTag():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
                 wallet.deduct_balance(request.json['uid'], amount)
+            else:
+                message = 'FastTag payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+                transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return jsonify(response), 200
         except Exception as e:
+            message = 'FastTag payment of amount '+str(amount)+' for ' + str(
+                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
+            transactionInstance.failedTransaction(
+                    request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             ## logging.error(e)
             return jsonify({'error': str(e)}), 400
 
@@ -1465,12 +1519,15 @@ def getAepsBalanceEnquiry():
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             return response
         else:
-            #logging.error(response[0])
+            message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
         #logging.error(e)
+        message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
         print(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1513,10 +1570,15 @@ def getAepsCashWithDrawl():
             transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
             return response
         else:
+            message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
+        #logging.error(e)
+        message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+        transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1555,11 +1617,15 @@ def miniStatement():
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:
+            message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
         logging.error(e)
+        message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1650,10 +1716,14 @@ def aadhaarPay():
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:
+            message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
+        message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
+        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
         ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1828,6 +1898,8 @@ def qrStatus():
             transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
             return response.json(), 400
     except Exception as e:
+        message = "Your upi transaction " + request.json['transactionId'] + " is failed"
+        transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
         ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
