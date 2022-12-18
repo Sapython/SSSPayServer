@@ -121,7 +121,7 @@ class UserManagement:
         # if not userData['confirmPassword'] == userData['password']:
         #     return {'error': 'Passwords do not match'}, 400
         # generate random password
-        password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
         splittedDob = userData['dob'].split('-')
         data = {
             "displayName": userData['displayName'],

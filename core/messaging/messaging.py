@@ -27,7 +27,7 @@ class Messaging:
         message = urllib.parse.quote(message)
         print("after",message)
         smsType = 'normal'
-        templateId = "1207161883476515597"
+        templateId = "1207162099029436668"
         dltId = '1201161855222539289'
         if (len(str(mobileNo))!=10):
             raise Exception('Invalid Mobile Number')
