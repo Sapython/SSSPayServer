@@ -71,8 +71,14 @@ class AEPS:
         # self.logging.info(payload)
         headers = self.auth.generatePaysprintAuthHeaders()
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index",data=payload,headers=headers)
-        print("Response",response.json())
-        return response.json(), response.status_code
+        if ('application/json' in response.headers.get('Content-Type', '')):
+            print('Response',response.json())
+            print('-'*20)
+            return response.json(), response.status_code, True
+        else:
+            print('Response',response.content)
+            print('-'*20)
+            return str(response.content), response.status_code, False
 
     def getBalanceEnquiryTest(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,is_iris:str,merchantCode:str):
         if not latitude:
@@ -123,8 +129,14 @@ class AEPS:
         # self.logging.info(payload)
         headers = self.auth.generatePaysprintAuthHeaders()
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/balanceenquiry/index",data=payload,headers=headers)
-        print("Response",response.json())
-        return response.json(), response.status_code
+        if ('application/json' in response.headers.get('Content-Type', '')):
+            print('Response',response.json())
+            print('-'*20)
+            return response.json(), response.status_code, True
+        else:
+            print('Response',response.content)
+            print('-'*20)
+            return str(response.content), response.status_code, False
     
 
     def withdrawCash(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,amount:int,is_iris:str,merchantCode:str):
@@ -173,9 +185,19 @@ class AEPS:
         # self.logging.info(payload)
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/cashwithdraw/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
         print('-'*20)
-        print('Response',response.json())
-        print('-'*20)
-        return response.json(), response.status_code
+        if ('application/json' in response.headers.get('Content-Type', '')):
+            try:
+                print('Response',response.json())
+                print('-'*20)
+                return response.json(), response.status_code, True
+            except:
+                print('Response',response.content)
+                print('-'*20)
+                return str(response.content), response.status_code, False
+        else:
+            print('Response',str(response.content))
+            print('-'*20)
+            return str(response.content), response.status_code, False
 
     def getMiniStatement(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,is_iris:str,merchantCode:str):
         if not latitude:
@@ -222,10 +244,14 @@ class AEPS:
         if self.development: print(payload)
         self.logging.info(payload)    
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/ministatement/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
-        print('-'*20)
-        print('Response',response.json())
-        print('-'*20)
-        return response.json(), response.status_code
+        if ('application/json' in response.headers.get('Content-Type', '')):
+            print('Response',response.json())
+            print('-'*20)
+            return response.json(), response.status_code, True
+        else:
+            print('Response',response.content)
+            print('-'*20)
+            return str(response.content), response.status_code, False
     
     def getCashWithdrawStatus(self,referenceNo:str):
         if not referenceNo:
@@ -241,8 +267,14 @@ class AEPS:
         # self.logging.info(payload)
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/aepsquery/query",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
         logging.info(response)
-        print("Response:",response)
-        return response.json(), response.status_code
+        if ('application/json' in response.headers.get('Content-Type', '')):
+            print('Response',response.json())
+            print('-'*20)
+            return response.json(), response.status_code, True
+        else:
+            print('Response',response.content)
+            print('-'*20)
+            return str(response.content), response.status_code, False
 
     def withdrawThreeWay(self,referenceId:str,status:str):
         if not referenceId:
@@ -261,7 +293,7 @@ class AEPS:
         }
         # self.logging.info(payload)
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/threeway/threeway",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
-        return response.json(), response.status_code
+        return response.json(), response.status_code, True
     
     def aadhaarPay(self,latitude:float,longitude:float,mobile_number:str,referenceNo:str,adhaarNumber:str,nationalBankIdentification:int,requestRemarks:str,authData:str,is_iris:str,merchantCode:str):
         if not latitude:
@@ -306,7 +338,14 @@ class AEPS:
         if self.development: print(payload)
         self.logging.info(payload)    
         response = requests.post("https://api.paysprint.in/api/v1/service/aadharpay/aadharpay/index",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
-        return response.json(), response.status_code
+        if ('application/json' in response.headers.get('Content-Type', '')):
+            print('Response',response.json())
+            print('-'*20)
+            return response.json(), response.status_code, True
+        else:
+            print('Response',response.content)
+            print('-'*20)
+            return str(response.content), response.status_code, False
     
     def getAadhaarPaymentStatus(self,referenceId:str):
         if not referenceId:
@@ -323,4 +362,11 @@ class AEPS:
         }
         logging.info(payload)
         response = requests.get("https://api.paysprint.in/api/v1/service/aadharpay/aadharpayquery/query",json=payload,headers=self.auth.generatePaysprintAuthHeaders())
-        return response.json(), response.status_code
+        if ('application/json' in response.headers.get('Content-Type', '')):
+            print('Response',response.json())
+            print('-'*20)
+            return response.json(), response.status_code, True
+        else:
+            print('Response',response.content)
+            print('-'*20)
+            return str(response.content), response.status_code, False

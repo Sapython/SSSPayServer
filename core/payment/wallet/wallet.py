@@ -1,10 +1,4 @@
-import json
-import base64
-import requests
-import datetime
 from firebase_admin import firestore
-from core.authentication.encryption import Encrypt
-from core.authentication.paysprintAuth import PaySprintAuth
 class Wallet:
     def __init__(self, app):
         self.app = app

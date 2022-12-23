@@ -1,0 +1,97 @@
+import math
+from firebase_admin import firestore
+import time
+import threading
+class CommisionAndCharges:
+    def __init__(self):
+        self.fs = firestore.client()
+        self.comissions = []
+        self.comission_callback_done = threading.Event()
+        self.comission_col_query = self.fs.collection(u'commissions')
+        self.comission_query_watch = self.comission_col_query.on_snapshot(self.commission_on_snapshot)
+        self.charges = []
+        self.charges_callback_done = threading.Event()
+        self.charges_col_query = self.fs.collection(u'charges')
+        self.charges_query_watch = self.charges_col_query.on_snapshot(self.charges_on_snapshot)
+
+    def commission_on_snapshot(self,col_snapshot, changes, read_time):
+        print(u'Callback received query snapshot.')
+        self.comissions = []
+        for doc in col_snapshot:
+            print(u'Document id: {}'.format(doc.id))
+            self.comissions.append(doc.to_dict())
+        self.comission_callback_done.set()
+
+    def charges_on_snapshot(self,col_snapshot, changes, read_time):
+        print(u'Callback received query snapshot.')
+        self.charges = []
+        for doc in col_snapshot:
+            print(u'Document id: {}'.format(doc.id))
+            self.charges.append(doc.to_dict())
+        self.charges_callback_done.set()
+        
+    def setCommision(self,transactionData,userId):
+        members = self.fs.collection('groups').document(transactionData['groupId']).get()
+        # print(self.comissions)
+        isComission = False
+        if (transactionData['serviceType'] in ['dth','mobile_recharge','aeps']):
+            result = list(sorted(list(filter(lambda x: x['service'] == transactionData['serviceType'], self.comissions)),key=lambda y:y['minimumAmount']))
+            print("Commission",result)
+            isComission = True
+        elif (transactionData['serviceType'] in ['expressPayoutUpi','expressPayoutImps','payoutImps','payoutUPI']):
+            result = list(sorted(list(filter(lambda x: x['service'] == transactionData['serviceType'], self.charges)),key=lambda y:y['minimumAmount']))
+            print("Charge",result)
+        else:
+            print("No Comission")
+            return "No ADDITIONAL FOUND"
+        finalRes = {}
+        # print("result",result)
+        # transactionData = self.fs.collection('users').document(userId).collection('transaction').document(transactionID).get().to_dict()
+        for res in result:
+            print("COND",res['maximumAmount'],transactionData['amount'],res['minimumAmount'],(res['maximumAmount'] >= transactionData['amount']),( transactionData['amount'] >= res['minimumAmount']))
+            if((res['maximumAmount'] >= transactionData['amount']) and ( transactionData['amount'] >= res['minimumAmount'])):
+                finalRes = res
+                break
+        try:
+            res = finalRes['accessLevels']
+        except:
+            print("No Comission charges set for price range")
+            return "No Comission charges set for price range"
+        charges = []
+        print("finalRes",finalRes)
+        if(finalRes):
+            for accesses in finalRes['accessLevels']:
+                if(finalRes['type']=='percentage'):
+                    charges.append((finalRes[accesses]/100)*transactionData['amount'])
+                elif finalRes['type']=='fixed':
+                    charges.append(finalRes[accesses])
+        for member in members.to_dict()['members']:
+            print("Member",member)
+            if(member['access']['access'] in finalRes['accessLevels']):
+                # print()
+                amount = math.floor(charges[finalRes['accessLevels'].index(member['access']['access'])])
+                if (not isComission):
+                    amount = -amount
+                print(amount)
+                self.fs.collection('users').document(userId).collection('wallet').document('wallet').update({
+                    'balance': firestore.Increment(amount)
+                })
+                self.fs.collection('groups').document(transactionData['groupId']).collection('transactions').add({
+                    **transactionData,
+                    'exchangeAmount': amount,
+                    'member': member['id'],
+                    'transactionType': 'credit',
+                    'transactionTime': firestore.SERVER_TIMESTAMP
+                })
+        # if (len(charges) > 0):
+        #     for member in members:
+        #         memberData = member.to_dict()
+        #         if(memberData['accessLevel'] in finalRes['accessLevels']):
+        #             self.fs.collection('users').document(userId).collection('members').document(member.id).update({
+        #                 'balance': memberData['balance']+charges[finalRes['accessLevels'].index(memberData['accessLevel'])]
+        #             })
+        return {"commission": self.comissions, "charges": self.charges}
+            
+
+
+    

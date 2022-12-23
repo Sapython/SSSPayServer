@@ -19,6 +19,7 @@ from core.authentication.paysprintAuth import PaySprintAuth
 from core.authentication.userManagement import UserManagement
 from core.helpers.Qr import QR
 from core.helpers.Transaction import Transaction
+from core.helpers.CommisionAndCharges import CommisionAndCharges
 from core.messaging.messaging import Messaging
 from core.payment.payout.payout import Payout
 from core.payment.wallet.wallet import Wallet
@@ -75,6 +76,7 @@ onboarding = Onboarding(app,logging)
 upi = UPI(app)
 HLR_WORKING = False
 paysprintAuth = PaySprintAuth(app)
+commisionManager = CommisionAndCharges()
 
 def authorize():
     if DEVELOPMENT:
@@ -1514,7 +1516,7 @@ def getAepsBalanceEnquiry():
         )
         print(response)
         ## logging.info(response)
-        if (response[0]['response_code'] == 1 and response[1] == 200):
+        if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             return response
@@ -1523,7 +1525,7 @@ def getAepsBalanceEnquiry():
             transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
-            return jsonify({'error': "An error occurred"}), 400
+            return jsonify({'error': "An error occurred","data":response}), 400
     except Exception as e:
         #logging.error(e)
         message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
@@ -1564,17 +1566,21 @@ def getAepsCashWithDrawl():
             mainTransactionData['extraData']['merchantCode']
         )
         print(response[0])
-        if (response[0]['response_code'] == 1 and response[1] == 200):
+        if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             wallet.add_balance(jsonData['uid'], mainTransactionData['amount'])
             message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
+            aeps.withdrawThreeWay(response[0]['clientrefno'],'success')
             return response
-        else:
+        elif (response[2]):
             message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
+            aeps.withdrawThreeWay(response[0]['clientrefno'],'failed')
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
-            return jsonify({'error': "An error occurred"}), 400
+            return jsonify({'error': "An error occurred","data":response}), 400
+        else:
+            return jsonify({'error': "An error occurred","data":response}), 400
     except Exception as e:
         #logging.error(e)
         message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
@@ -1612,7 +1618,7 @@ def miniStatement():
         )
         print(response)
         logging.info(response)
-        if (response[0]['response_code'] == 1 and response[1] == 200):
+        if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
@@ -1621,7 +1627,7 @@ def miniStatement():
             transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
-            return jsonify({'error': "An error occurred"}), 400
+            return jsonify({'error': "An error occurred","data":response}), 400
     except Exception as e:
         logging.error(e)
         message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
@@ -1668,7 +1674,7 @@ def withdrawThreeWay():
         response = aeps.withdrawThreeWay(
             jsonData['reference'], jsonData['status'])
         print(response)
-        if (response[0]['response_code'] == 1 and response[1] == 200):
+        if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             ## logging.info(response)
             return response
         else:
@@ -1711,7 +1717,7 @@ def aadhaarPay():
         )
         print(response)
         #logging.info(response)
-        if (response[0]['response_code'] == 1 and response[1] == 200):
+        if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
@@ -1741,7 +1747,7 @@ def aadhaarPayStatus():
         jsonData = request.json
         response = aeps.aadhaarPayStatus(jsonData['referenceId'])
         print(response)
-        if (response[0]['response_code'] == 1 and response[1] == 200):
+        if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             return response
         else:
             ## logging.error(response)
@@ -1912,6 +1918,13 @@ def sendSMS():
     if (res):
         print(res.content)
     return "DONE"
+
+
+@app.route('/commission',methods=['POST','GET'])
+def commission():
+    data = fs.collection("users").document("YpBrnCoe4laoeY1RmTCZ4pupOys2").collection("transaction").document("0GSa6y4jz9RSuGOgZ0Kj").get()
+    return commisionManager.setCommision(data.to_dict(),"YpBrnCoe4laoeY1RmTCZ4pupOys2")
+    # return commisionManager.setCommision('0GSa6y4jz9RSuGOgZ0Kj','YpBrnCoe4laoeY1RmTCZ4pupOys2','aeps','17rwVDDLspUNGRgQUYA6')
 
 
 if __name__ == '__main__':
