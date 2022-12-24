@@ -19,7 +19,7 @@ from core.authentication.paysprintAuth import PaySprintAuth
 from core.authentication.userManagement import UserManagement
 from core.helpers.Qr import QR
 from core.helpers.Transaction import Transaction
-from core.helpers.CommisionAndCharges import CommisionAndCharges
+from core.helpers.CommisionAndCharges import CommissionAndCharges
 from core.messaging.messaging import Messaging
 from core.payment.payout.payout import Payout
 from core.payment.wallet.wallet import Wallet
@@ -76,7 +76,7 @@ onboarding = Onboarding(app,logging)
 upi = UPI(app)
 HLR_WORKING = False
 paysprintAuth = PaySprintAuth(app)
-commisionManager = CommisionAndCharges()
+commisionManager = CommissionAndCharges()
 
 def authorize():
     if DEVELOPMENT:
@@ -1923,7 +1923,7 @@ def sendSMS():
 @app.route('/commission',methods=['POST','GET'])
 def commission():
     data = fs.collection("users").document("YpBrnCoe4laoeY1RmTCZ4pupOys2").collection("transaction").document("0GSa6y4jz9RSuGOgZ0Kj").get()
-    return commisionManager.setCommision(data.to_dict(),"YpBrnCoe4laoeY1RmTCZ4pupOys2")
+    return commisionManager.setCommission(data.to_dict(),"YpBrnCoe4laoeY1RmTCZ4pupOys2")
     # return commisionManager.setCommision('0GSa6y4jz9RSuGOgZ0Kj','YpBrnCoe4laoeY1RmTCZ4pupOys2','aeps','17rwVDDLspUNGRgQUYA6')
 
 

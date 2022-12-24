@@ -83,6 +83,7 @@ class CommissionAndCharges:
                     **transactionData,
                     'exchangeAmount': amount,
                     'member': member['id'],
+                    "ownerId": userId,
                     'transactionType': transactionType,
                     'transactionTime': firestore.SERVER_TIMESTAMP
                 })
