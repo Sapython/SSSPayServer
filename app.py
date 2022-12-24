@@ -1937,14 +1937,12 @@ def generateOtp():
             return jsonify({'error': "We didn't received your data in json format "}), 400
         if (not requestData['mobile']):
             return jsonify({'error': "Mobile number is required"}), 400
-        if (not requestData['uid']):
-            return jsonify({'error': "User id is required"}), 400
         otp = random.randint(100000, 999999)
-        previousOtp = fs.collection("otpData").document(requestData['uid']).get()
+        previousOtp = fs.collection("otpData").document(requestData['mobile']).get()
         if(previousOtp.exists and previousOtp.to_dict()['otp']):
             otp = previousOtp.to_dict()['otp']
         else:
-            doc = fs.collection("otpData").document(requestData['uid']).set({"otp":otp})
+            doc = fs.collection("otpData").document(requestData['mobile']).set({"otp":otp})
         res = messaging.sendOtp(otp,requestData['mobile'])
         if (res):
             print(res.content)
@@ -1965,14 +1963,50 @@ def verifyOtp():
             return jsonify({'error': "We didn't received your data in json format "}), 400
         if (not requestData['otp']):
             return jsonify({'error': "Otp is required"}), 400
-        if (not requestData['uid']):
-            return jsonify({'error': "User id is required"}), 400
-        previousOtp = fs.collection("otpData").document(requestData['uid']).get()
+        previousOtp = fs.collection("otpData").document(requestData['mobile']).get()
         if(str(previousOtp.to_dict()['otp']) == str(requestData['otp'])):
-            previousOtp = fs.collection("otpData").document(requestData['uid']).update({"otp":None})
+            previousOtp = fs.collection("otpData").document(requestData['mobile']).update({"otp":None})
             return jsonify({"status":"OTP is verified."}), 200
         else:
             return jsonify({"error":"Incorrect OTP entered."}), 400
+    except Exception as e:
+        ## logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': e}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+@app.route('/resetPassword/checkEmailPhone',methods=['POST'])
+def checkEmail():
+    # check if email or the phone exists in users database
+    try:
+        requestData = request.json
+        if (not request.is_json):
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+            
+        if ('email' in requestData.keys()):
+            return userManagement.getUserByEmail(requestData['email'])
+        elif ('mobile' in requestData.keys()):
+            return userManagement.getUserByPhone('+91'+requestData['mobile'])
+        else:
+            return jsonify({'error': "Email or phone is required"}), 400
+    except Exception as e:
+        ## logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': e}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
+@app.route('/resetPassword',methods=['POST'])
+def resetPassword():
+    try:
+        requestData = request.json
+        if (not request.is_json):
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+        if (not requestData['uid']):
+            return jsonify({'error': "User id is required"}), 400
+        if (not requestData['password']):
+            return jsonify({'error': "Password is required"}), 400
+        return userManagement.resetPassword(requestData['uid'],requestData['password'])
     except Exception as e:
         ## logging.error(e)
         if DEVELOPMENT:

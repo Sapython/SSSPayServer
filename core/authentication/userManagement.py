@@ -16,6 +16,24 @@ class UserManagement:
         self.auth = auth
         self.accessLevels = ['guest','blocked', 'retailer', 'distributor',
                              'masterDistributor', 'superDistributor', 'admin']
+    
+    def getUserByPhone(self,phone):
+        user = self.auth.get_user_by_phone_number(phone)
+        if (user):
+            return {"status":"success","userId":user.uid}
+        else:
+            return {"error":"User does not exist"}
+
+    def getUserByEmail(self,email):
+        user = self.auth.get_user_by_email(email)
+        if (user):
+            return {"status":"success","userId":user.uid}
+        else:
+            return {"error":"User does not exist"}
+    
+    def resetPassword(self,userId,password):
+        self.auth.update_user(userId, password=password)
+        return {'message': 'Password reset successfully'}
 
     def unblockUser(self, userId, blockedId):
         if not (userId and blockedId):
