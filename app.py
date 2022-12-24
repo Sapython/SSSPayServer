@@ -20,7 +20,7 @@ from core.authentication.paysprintAuth import PaySprintAuth
 from core.authentication.userManagement import UserManagement
 from core.helpers.Qr import QR
 from core.helpers.Transaction import Transaction
-from core.helpers.CommisionAndCharges import CommisionAndCharges
+from core.helpers.CommisionAndCharges import CommissionAndCharges
 from core.messaging.messaging import Messaging
 from core.payment.payout.payout import Payout
 from core.payment.wallet.wallet import Wallet
@@ -77,7 +77,7 @@ onboarding = Onboarding(app,logging)
 upi = UPI(app)
 HLR_WORKING = False
 paysprintAuth = PaySprintAuth(app)
-commisionManager = CommisionAndCharges()
+commisionManager = CommissionAndCharges()
 
 def authorize():
     if DEVELOPMENT:
