@@ -2,13 +2,13 @@ import math
 from firebase_admin import firestore
 import time
 import threading
-class CommisionAndCharges:
+class CommissionAndCharges:
     def __init__(self):
         self.fs = firestore.client()
-        self.comissions = []
-        self.comission_callback_done = threading.Event()
-        self.comission_col_query = self.fs.collection(u'commissions')
-        self.comission_query_watch = self.comission_col_query.on_snapshot(self.commission_on_snapshot)
+        self.commissions = []
+        self.commission_callback_done = threading.Event()
+        self.commission_col_query = self.fs.collection(u'commissions')
+        self.commission_query_watch = self.commission_col_query.on_snapshot(self.commission_on_snapshot)
         self.charges = []
         self.charges_callback_done = threading.Event()
         self.charges_col_query = self.fs.collection(u'charges')
@@ -16,11 +16,11 @@ class CommisionAndCharges:
 
     def commission_on_snapshot(self,col_snapshot, changes, read_time):
         print(u'Callback received query snapshot.')
-        self.comissions = []
+        self.commissions = []
         for doc in col_snapshot:
             print(u'Document id: {}'.format(doc.id))
-            self.comissions.append(doc.to_dict())
-        self.comission_callback_done.set()
+            self.commissions.append(doc.to_dict())
+        self.commission_callback_done.set()
 
     def charges_on_snapshot(self,col_snapshot, changes, read_time):
         print(u'Callback received query snapshot.')
@@ -30,19 +30,19 @@ class CommisionAndCharges:
             self.charges.append(doc.to_dict())
         self.charges_callback_done.set()
         
-    def setCommision(self,transactionData,userId):
+    def setCommission(self,transactionData,userId):
         members = self.fs.collection('groups').document(transactionData['groupId']).get()
-        # print(self.comissions)
-        isComission = False
+        # print(self.commissions)
+        isCommission = False
         if (transactionData['serviceType'] in ['dth','mobile_recharge','aeps']):
-            result = list(sorted(list(filter(lambda x: x['service'] == transactionData['serviceType'], self.comissions)),key=lambda y:y['minimumAmount']))
+            result = list(sorted(list(filter(lambda x: x['service'] == transactionData['serviceType'], self.commissions)),key=lambda y:y['minimumAmount']))
             print("Commission",result)
-            isComission = True
+            isCommission = True
         elif (transactionData['serviceType'] in ['expressPayoutUpi','expressPayoutImps','payoutImps','payoutUPI']):
             result = list(sorted(list(filter(lambda x: x['service'] == transactionData['serviceType'], self.charges)),key=lambda y:y['minimumAmount']))
             print("Charge",result)
         else:
-            print("No Comission")
+            print("No Commission")
             return "No ADDITIONAL FOUND"
         finalRes = {}
         # print("result",result)
@@ -55,8 +55,8 @@ class CommisionAndCharges:
         try:
             res = finalRes['accessLevels']
         except:
-            print("No Comission charges set for price range")
-            return "No Comission charges set for price range"
+            print("No Commission charges set for price range")
+            return "No Commission charges set for price range"
         charges = []
         print("finalRes",finalRes)
         if(finalRes):
@@ -70,17 +70,20 @@ class CommisionAndCharges:
             if(member['access']['access'] in finalRes['accessLevels']):
                 # print()
                 amount = math.floor(charges[finalRes['accessLevels'].index(member['access']['access'])])
-                if (not isComission):
+                if (not isCommission):
                     amount = -amount
                 print(amount)
                 self.fs.collection('users').document(userId).collection('wallet').document('wallet').update({
                     'balance': firestore.Increment(amount)
                 })
+                transactionType = 'credit'
+                if (not isCommission):
+                    transactionType = 'debit'
                 self.fs.collection('groups').document(transactionData['groupId']).collection('transactions').add({
                     **transactionData,
                     'exchangeAmount': amount,
                     'member': member['id'],
-                    'transactionType': 'credit',
+                    'transactionType': transactionType,
                     'transactionTime': firestore.SERVER_TIMESTAMP
                 })
         # if (len(charges) > 0):
@@ -90,7 +93,7 @@ class CommisionAndCharges:
         #             self.fs.collection('users').document(userId).collection('members').document(member.id).update({
         #                 'balance': memberData['balance']+charges[finalRes['accessLevels'].index(memberData['accessLevel'])]
         #             })
-        return {"commission": self.comissions, "charges": self.charges}
+        return {"commission": self.commissions, "charges": self.charges}
             
 
 
