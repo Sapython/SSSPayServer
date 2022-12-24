@@ -5,6 +5,7 @@ SSSPay payment server
 version = "1.0.0"
 import logging
 import os
+import random
 import time
 
 import firebase_admin
@@ -1922,10 +1923,61 @@ def sendSMS():
 
 @app.route('/commission',methods=['POST','GET'])
 def commission():
-    data = fs.collection("users").document("YpBrnCoe4laoeY1RmTCZ4pupOys2").collection("transaction").document("0GSa6y4jz9RSuGOgZ0Kj").get()
+    data = fs.collection("users").document("YpBrnCoe4laoeY1RmTCZ4pupOys2d").collection("transaction").document("0GSa6y4jz9RSuGOgZ0Kj").get()
     return commisionManager.setCommision(data.to_dict(),"YpBrnCoe4laoeY1RmTCZ4pupOys2")
     # return commisionManager.setCommision('0GSa6y4jz9RSuGOgZ0Kj','YpBrnCoe4laoeY1RmTCZ4pupOys2','aeps','17rwVDDLspUNGRgQUYA6')
 
+
+@app.route('/resetPassword/generateOtp',methods=['POST'])
+def generateOtp():
+    try:
+        requestData = request.json
+        print("requestData",requestData)
+        if (not request.is_json):
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+        if (not requestData['mobile']):
+            return jsonify({'error': "Mobile number is required"}), 400
+        if (not requestData['uid']):
+            return jsonify({'error': "User id is required"}), 400
+        otp = random.randint(100000, 999999)
+        previousOtp = fs.collection("otpData").document(requestData['uid']).get()
+        if(previousOtp.exists and previousOtp.to_dict()['otp']):
+            otp = previousOtp.to_dict()['otp']
+        else:
+            doc = fs.collection("otpData").document(requestData['uid']).set({"otp":otp})
+        res = messaging.sendOtp(otp,requestData['mobile'])
+        if (res):
+            print(res.content)
+            return jsonify({"status":("Otp is sent to {}").format("******"+str(requestData['mobile'])[6:10])}), 200
+        else:
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+    except Exception as e:
+        ## logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': str(e)}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+@app.route('/resetPassword/verifyOtp',methods=['POST'])
+def verifyOtp():
+    try:
+        requestData = request.json
+        if (not request.is_json):
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+        if (not requestData['otp']):
+            return jsonify({'error': "Otp is required"}), 400
+        if (not requestData['uid']):
+            return jsonify({'error': "User id is required"}), 400
+        previousOtp = fs.collection("otpData").document(requestData['uid']).get()
+        if(str(previousOtp.to_dict()['otp']) == str(requestData['otp'])):
+            previousOtp = fs.collection("otpData").document(requestData['uid']).update({"otp":None})
+            return jsonify({"status":"OTP is verified."}), 200
+        else:
+            return jsonify({"error":"Incorrect OTP entered."}), 400
+    except Exception as e:
+        ## logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': e}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
 
 if __name__ == '__main__':
     server_port = os.environ.get('PORT', '8081')

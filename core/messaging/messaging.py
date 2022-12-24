@@ -36,6 +36,11 @@ class Messaging:
         print(f'http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID={self.user}&Password={self.password}&SenderID={self.senderId}&Phno={str(mobileNo)}&Msg={message}&EntityID={dltId}')
         return requests.get(f'http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID={self.user}&Password={self.password}&SenderID={self.senderId}&Phno={str(mobileNo)}&Msg={message}&EntityID={dltId}&TemplateId={templateId}')
     
+    def sendOtp(self,otp,mobile):
+        dltId = '1201161855222539289'
+        message = ("{otp} is your OTP for Login. OTP valid for {mobile} minutes. Regards SSSPAY").format(otp=otp,mobile=mobile)
+        return requests.get(f'http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID={self.user}&Password={self.password}&SenderID={self.senderId}&Phno={str(mobile)}&Msg={message}&EntityID={dltId}&TemplateId=1207161883476515597')
+    
     def sendMultiSMS(self,message:str,mobileNos:list,priority="dnd"):
         """
         It sends a single SMS to a single mobile number
