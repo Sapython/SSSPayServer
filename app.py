@@ -3,6 +3,7 @@ SSSPay payment server
 """
 
 version = "1.0.0"
+import datetime
 import logging
 import os
 import random
@@ -77,7 +78,7 @@ onboarding = Onboarding(app,logging)
 upi = UPI(app)
 HLR_WORKING = False
 paysprintAuth = PaySprintAuth(app)
-commisionManager = CommissionAndCharges()
+commissionManager = CommissionAndCharges()
 
 def authorize():
     if DEVELOPMENT:
@@ -552,6 +553,12 @@ def expressPayout():
             elif (responseData[0]['status'] == 'processed'):
                 message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+                if ((transactionValue['serviceType'] == 'payoutUPI' ) or (transactionValue['serviceType'] == 'payoutUPI')):
+                    if (transactionValue['extraData']['dailyPayoutTime']):
+                        if (datetime.datetime.now().strftime("%d/%m/%Y") != transactionValue['extraData']['dailyPayoutTime']):
+                            commissionManager.setCommission(transactionValue, request.json['uid'])
+                    # get date in dd/mm/yyyy format
+                fs.collection('users').document(request.json['uid']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
                 return {"success": "Payout created successfully","data":responseData}, 200
@@ -635,6 +642,11 @@ def completeDailyPayout():
             elif (responseData[0]['status'] == 'processed'):
                 message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
                     transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+                if ((transactionValue['serviceType'] == 'payoutUPI' ) or (transactionValue['serviceType'] == 'payoutUPI')):
+                    if (datetime.datetime.now().strftime("%d/%m/%Y") != transactionValue['extraData']['dailyPayoutTime']):
+                        commissionManager.setCommission(transactionValue, request.json['uid'])
+                    # get date in dd/mm/yyyy format
+                    fs.collection('users').document(request.json['uid']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
             elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
@@ -822,6 +834,7 @@ def rechargeLpg():
                 print("status", True,)
                 message = 'LPG payment of amount '+str(amount)+' for ' + str(caNumber) + ' for operator ' + str(
                     operatorNo) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                commissionManager.setCommission(transaction, request.json['uid'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'lpg', response)
                 wallet.deduct_balance(request.json['uid'], amount)
@@ -965,6 +978,7 @@ def doRecharge():
                 print("status", True,)
                 message = 'Recharge of amount '+str(amount)+' for ' + str(
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                commissionManager.setCommission(transactionData, request.json['uid'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'recharge', response)
                 wallet.deduct_balance(request.json['uid'], amount)
@@ -1073,6 +1087,7 @@ def payBill():
             if (response['status'] == True and response['response_code'] == 1):
                 message = 'Bill payment of amount '+str(amount)+' for ' + str(
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                commissionManager.setCommission(transaction, request.json['uid'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'bbps', response)
                 wallet.deductBalance(request.json['uid'], amount)
@@ -1158,6 +1173,7 @@ def payLicBill():
             if (response['status'] == True and response['response_code'] == 1):
                 message = 'Lic payment of amount '+str(amount)+' for ' + str(
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                commissionManager.setCommission(transaction, request.json['uid'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'lic', response)
                 wallet.deduct_balance(request.json['uid'], amount)
@@ -1258,6 +1274,7 @@ def rechargeFastTag():
             if (response['status'] == True and response['response_code'] == 1):
                 message = 'FastTag payment of amount '+str(amount)+' for ' + str(
                     caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
+                commissionManager.setCommission(transaction, request.json['uid'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
                 wallet.deduct_balance(request.json['uid'], amount)
@@ -1519,18 +1536,17 @@ def getAepsBalanceEnquiry():
         ## logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            commissionManager.setCommission(transactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             return response
         else:
-            message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
+            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response[0])
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred","data":response}), 400
     except Exception as e:
         #logging.error(e)
-        message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
+        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response[0])
         print(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1570,13 +1586,14 @@ def getAepsCashWithDrawl():
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             wallet.add_balance(jsonData['uid'], mainTransactionData['amount'])
             message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            commissionManager.setCommission(transactionData, request.json['uid'])
             transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
             aeps.withdrawThreeWay(response[0]['clientrefno'],'success')
             return response
         elif (response[2]):
-            message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-            transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
-            aeps.withdrawThreeWay(response[0]['clientrefno'],'failed')
+            transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], response[0])
+            if (response[0]['response_code'] == 0 and response[0]['status']):
+                aeps.withdrawThreeWay(response[0]['clientrefno'],'failed')
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred","data":response}), 400
@@ -1584,8 +1601,7 @@ def getAepsCashWithDrawl():
             return jsonify({'error': "An error occurred","data":response}), 400
     except Exception as e:
         #logging.error(e)
-        message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-        transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
+        transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], response[0])
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1621,18 +1637,17 @@ def miniStatement():
         logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            commissionManager.setCommission(transactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:
-            message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred","data":response}), 400
     except Exception as e:
         logging.error(e)
-        message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
@@ -1720,17 +1735,16 @@ def aadhaarPay():
         #logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+            commissionManager.setCommission(transactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:
-            message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred"}), 400
     except Exception as e:
-        message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+        transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
         ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1900,13 +1914,10 @@ def qrStatus():
             transactionInstance.completeTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
             return response.json(), 200
         else:
-            message = "Your upi transaction " + \
-                request.json['transactionId'] + " is failed"
-            transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
+            transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],response.json())
             return response.json(), 400
     except Exception as e:
-        message = "Your upi transaction " + request.json['transactionId'] + " is failed"
-        transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
+        transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],response.json())
         ## logging.error(e)
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1924,7 +1935,7 @@ def sendSMS():
 @app.route('/commission',methods=['POST','GET'])
 def commission():
     data = fs.collection("users").document("YpBrnCoe4laoeY1RmTCZ4pupOys2d").collection("transaction").document("0GSa6y4jz9RSuGOgZ0Kj").get()
-    return commisionManager.setCommision(data.to_dict(),"YpBrnCoe4laoeY1RmTCZ4pupOys2")
+    return commissionManager.setCommision(data.to_dict(),"YpBrnCoe4laoeY1RmTCZ4pupOys2")
     # return commisionManager.setCommision('0GSa6y4jz9RSuGOgZ0Kj','YpBrnCoe4laoeY1RmTCZ4pupOys2','aeps','17rwVDDLspUNGRgQUYA6')
 
 

@@ -31,13 +31,13 @@ class Transaction:
         self.processes.append(process)
         process.start()
 
-    def failedTransaction(self, userId: str, transactionId: str, message: str, paymentType: str, successData: dict):
+    def failedTransaction(self, userId: str, transactionId: str, successData: dict):
         process = Thread(target=self.failedTransactionProcess, args=(
-            userId, transactionId, message, paymentType, successData))
+            userId, transactionId, successData))
         self.processes.append(process)
         process.start()
 
-    def failedTransactionProcess(self, userId: str, transactionId: str, message: str, paymentType: str, errorData: dict):
+    def failedTransactionProcess(self, userId: str, transactionId: str, errorData: dict):
         startTime = time.time()
         userData = self.fs.collection('users').document(userId).get().to_dict()
         print(userData)

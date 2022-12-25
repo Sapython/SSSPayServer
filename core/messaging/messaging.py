@@ -27,7 +27,7 @@ class Messaging:
         message = urllib.parse.quote(message)
         print("after",message)
         smsType = 'normal'
-        templateId = "1207162099029436668"
+        templateId = "1207167145086220796"
         dltId = '1201161855222539289'
         if (len(str(mobileNo))!=10):
             raise Exception('Invalid Mobile Number')
@@ -38,7 +38,7 @@ class Messaging:
     
     def sendOtp(self,otp,mobile):
         dltId = '1201161855222539289'
-        message = ("{otp} is your OTP for Login. OTP valid for {mobile} minutes. Regards SSSPAY").format(otp=otp,mobile=mobile)
+        message = ("{otp} is your OTP for Login. OTP valid for {mobile} minutes. Regards SSSPAY").format(otp=otp,mobile=10)
         return requests.get(f'http://nimbusit.biz/api/SmsApi/SendSingleApi?UserID={self.user}&Password={self.password}&SenderID={self.senderId}&Phno={str(mobile)}&Msg={message}&EntityID={dltId}&TemplateId=1207161883476515597')
     
     def sendMultiSMS(self,message:str,mobileNos:list,priority="dnd"):
