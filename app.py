@@ -2024,6 +2024,17 @@ def resetPassword():
             return jsonify({'error': e}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
+@app.route('/userAdd',methods=['POST'])
+def userAdd():
+    try:
+        return userManagement.testFunction()
+    except Exception as e:
+        ## logging.error(e)
+        if DEVELOPMENT:
+            return jsonify({'error': e}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
+
+
 if __name__ == '__main__':
     server_port = os.environ.get('PORT', '8081')
     app.run(debug=True, port=server_port, host='0.0.0.0')
