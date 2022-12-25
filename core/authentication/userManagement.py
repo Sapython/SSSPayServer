@@ -6,6 +6,7 @@ from core.authentication.paysprintAuth import PaySprintAuth
 from firebase_admin import firestore
 from core.messaging.messaging import Messaging
 
+
 class UserManagement:
     def __init__(self, auth, app):
         super().__init__()
@@ -14,24 +15,24 @@ class UserManagement:
         self.encryption = Encrypt()
         self.firestore = firestore.client()
         self.auth = auth
-        self.accessLevels = ['guest','blocked', 'retailer', 'distributor',
+        self.accessLevels = ['guest', 'blocked', 'retailer', 'distributor',
                              'masterDistributor', 'superDistributor', 'admin']
-    
-    def getUserByPhone(self,phone):
+
+    def getUserByPhone(self, phone):
         user = self.auth.get_user_by_phone_number(phone)
         if (user):
-            return {"status":"success","userId":user.uid}
+            return {"status": "success", "userId": user.uid}
         else:
-            return {"error":"User does not exist"}
+            return {"error": "User does not exist"}
 
-    def getUserByEmail(self,email):
+    def getUserByEmail(self, email):
         user = self.auth.get_user_by_email(email)
         if (user):
-            return {"status":"success","userId":user.uid}
+            return {"status": "success", "userId": user.uid}
         else:
-            return {"error":"User does not exist"}
-    
-    def resetPassword(self,userId,password):
+            return {"error": "User does not exist"}
+
+    def resetPassword(self, userId, password):
         self.auth.update_user(userId, password=password)
         return {'message': 'Password reset successfully'}
 
@@ -44,7 +45,7 @@ class UserManagement:
             data = doc.to_dict()
             if data['access']['access'] in ['admin']:
                 self.firestore.collection('users').document(
-                    blockedId).update({'status': {'access': 'active'},'access': {'access': 'guest'}})
+                    blockedId).update({'status': {'access': 'active'}, 'access': {'access': 'guest'}})
                 self.auth.update_user(blockedId, disabled=False)
                 return {'message': 'User unblocked successfully'}
             else:
@@ -59,7 +60,8 @@ class UserManagement:
             data = doc.to_dict()
             if data['access']['access'] in ['admin']:
                 docRef = self.firestore.collection('users').document(blockId)
-                docRef.update({'status': {'access': 'blocked'},'access':{'access':'blocked'}})
+                docRef.update({'status': {'access': 'blocked'},
+                              'access': {'access': 'blocked'}})
                 self.auth.update_user(blockId, disabled=True)
                 return {'message': 'User blocked successfully'}
             else:
@@ -139,17 +141,18 @@ class UserManagement:
         # if not userData['confirmPassword'] == userData['password']:
         #     return {'error': 'Passwords do not match'}, 400
         # generate random password
-        password = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+        password = ''.join(random.choices(
+            string.ascii_letters + string.digits, k=6))
         splittedDob = userData['dob'].split('-')
         data = {
             "displayName": userData['displayName'],
             "email": userData['email'],
             "phoneNumber": userData['phoneNumber'],
-            "dob": datetime.datetime(int(splittedDob[0]),int(splittedDob[1]),int(splittedDob[2])),
+            "dob": datetime.datetime(int(splittedDob[0]), int(splittedDob[1]), int(splittedDob[2])),
             "photoURL": userData['photoURL'],
             "gender": userData['gender'],
             "emailVerified": "boolean",
-            "access": {"access":userData['access']},
+            "access": {"access": userData['access']},
             "status": {
                 "isOnline": True,
                 "access": 'active'
@@ -181,25 +184,108 @@ class UserManagement:
         }
         if userData['access'] in self.accessLevels:
             user = self.firestore.collection(
-                'users').document(userData['email'])
+                'users').document(userData['uid'])
             doc = user.get()
             if doc.exists:
                 return {'error': 'User already exists'}, 400
             else:
                 user = self.auth.create_user(
-                    email = userData['email'],
-                    email_verified = False,
-                    password = password,
-                    display_name = userData['displayName'],
-                    photo_url = userData['photoURL'],
-                    disabled = False,
-                    phone_number = '+91'+userData['phoneNumber']
+                    uid=userData['uid'],
+                    email=userData['email'],
+                    email_verified=False,
+                    password=password,
+                    display_name=userData['displayName'],
+                    photo_url=userData['photoURL'],
+                    disabled=False,
+                    phone_number='+91'+userData['phoneNumber']
                 )
                 data['userId'] = user.uid
                 # message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY"
-                message = ("Successfully Registered With SSSPay.Your UserID is {name} and Password is {password} do not disclose to anyone").format(name=userData['email'],password=password)
-                self.messaging.sendSingleSMS(message,userData['phoneNumber'])
-                self.firestore.collection('users').document(data['userId']).set(data)
-                return {'message': 'User created successfully',"response_code":1,"newUser":data}
+                message = ("Successfully Registered With SSSPay.Your UserID is {name} and Password is {password} do not disclose to anyone").format(
+                    name=userData['email'], password=password)
+                self.messaging.sendSingleSMS(message, userData['phoneNumber'])
+                self.firestore.collection('users').document(
+                    data['userId']).set(data)
+                return {'message': 'User created successfully', "response_code": 1, "newUser": data}
         else:
             return {'error': 'Invalid access level requested'}, 400
+
+    def testFunction(self):
+        # userData = {
+        #     "uid": "P4JHNdQLacXaSd8RFN61XUQ7A22",
+        #     "displayName": "Hariom Kushawaha",
+        #     "email": "hariomkushwaha8423@gmail.com",
+        #     "phoneNumber": "8423522492",
+        #     "dob": "1999-01-01",
+        #     "password":"ifZp8w",
+        #     "photoURL": "https://firebasestorage.googleapis.com/v0/b/sit-manager.appspot.com/o/users%2Fdefault%2Fuser.png?alt=media&token=f7502ba7-275f-40a8-92bd-7df725bc7786",
+        #     "gender":"male",
+        #     "access": "guest",
+        #     "state": "Uttar Pradesh",
+        #     "city": "",
+        #     "pincode": "",
+        #     "address": "",
+        #     "aadhaarNumber": "",
+        #     "panNumber": ""
+        # }
+        # splittedDob = userData['dob'].split('-')
+        # data = {
+        #     "displayName": userData['displayName'],
+        #     "email": userData['email'],
+        #     "phoneNumber": userData['phoneNumber'],
+        #     "dob": datetime.datetime(int(splittedDob[0]), int(splittedDob[1]), int(splittedDob[2])),
+        #     "photoURL": userData['photoURL'],
+        #     "gender": userData['gender'],
+        #     "emailVerified": "boolean",
+        #     "access": {"access": userData['access']},
+        #     "status": {
+        #         "isOnline": True,
+        #         "access": 'active'
+        #     },
+        #     "state": userData['state'],
+        #     "city": userData['city'],
+        #     "pincode": userData['pincode'],
+        #     "address": userData['address'],
+        #     "aadhaarNumber": userData['aadhaarNumber'],
+        #     "tutorialCompleted": False,
+        #     "panCardNumber": userData['panNumber'],
+        #     "qrCode": "",
+        #     "onboardingDone": False,
+        #     "payoutDetailsCompleted": False,
+        #     "primaryPayoutAccount": None,
+        #     "payoutFundAccount": [],
+        #     "selfieImage": "",
+        #     "shopImage": "",
+        #     "memberAssigned": True,
+        #     "kycStatus": 'incomplete',
+        #     "onboardingSteps": {
+        #         "phoneDobDone": False,
+        #         "panDone": False,
+        #         "locationDone": False,
+        #         "aadhaarDone": False,
+        #         "photosDone": False,
+        #     },
+        #     "messageToken": ""
+        # }
+        # user = self.auth.create_user(
+        #     uid=userData['uid'],
+        #     phone_number= "+91"+userData['phoneNumber'] ,
+        #     email= userData['email'],
+        #     email_verified=True,
+        #     password=userData['password'],
+        #     display_name=userData['displayName'],
+        #     photo_url=userData["photoURL"],
+        #     disabled=False
+        # )
+        user = self.auth.update_user(
+            uid="P4JHNdQLacXaSd8RFN61XUQ7A22",
+            phone_number= "+919919703838"
+        )
+        # # return "Done"
+        # data['userId'] = user.uid
+        # # message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY"
+        # # message = ("Successfully Registered With SSSPay.Your UserID is {name} and Password is {password} do not disclose to anyone").format(
+        # #     name=userData['email'], password=password)
+        # # self.messaging.sendSingleSMS(message, userData['phoneNumber'])
+        # self.firestore.collection('users').document(data['userId']).set(data)
+        return "Done"

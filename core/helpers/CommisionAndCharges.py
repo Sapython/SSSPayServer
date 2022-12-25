@@ -31,6 +31,7 @@ class CommissionAndCharges:
         self.charges_callback_done.set()
         
     def setCommission(self,transactionData,userId):
+        print("Commission Data: ",transactionData)
         members = self.fs.collection('groups').document(transactionData['groupId']).get()
         # print(self.commissions)
         isCommission = False
@@ -94,7 +95,6 @@ class CommissionAndCharges:
         #             self.fs.collection('users').document(userId).collection('members').document(member.id).update({
         #                 'balance': memberData['balance']+charges[finalRes['accessLevels'].index(memberData['accessLevel'])]
         #             })
-        return {"commission": self.commissions, "charges": self.charges}
             
 
 
