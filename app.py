@@ -1536,7 +1536,7 @@ def getAepsBalanceEnquiry():
         ## logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(transactionData, request.json['uid'])
+            commissionManager.setCommission(mainTransactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             return response
         else:
@@ -1586,7 +1586,7 @@ def getAepsCashWithDrawl():
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             wallet.add_balance(jsonData['uid'], mainTransactionData['amount'])
             message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(transactionData, request.json['uid'])
+            commissionManager.setCommission(mainTransactionData, request.json['uid'])
             transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
             aeps.withdrawThreeWay(response[0]['clientrefno'],'success')
             return response
@@ -1637,7 +1637,7 @@ def miniStatement():
         logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(transactionData, request.json['uid'])
+            commissionManager.setCommission(mainTransactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:
@@ -1735,7 +1735,7 @@ def aadhaarPay():
         #logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(transactionData, request.json['uid'])
+            commissionManager.setCommission(mainTransactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:
