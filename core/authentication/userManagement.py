@@ -278,8 +278,8 @@ class UserManagement:
         #     disabled=False
         # )
         user = self.auth.update_user(
-            uid="P4JHNdQLacXaSd8RFN61XUQ7A22",
-            phone_number= "+919919703838"
+            uid="YpBrnCoe4laoeY1RmTCZ4pupOys2",
+            password= "Sirsa@12345"
         )
         # # return "Done"
         # data['userId'] = user.uid
