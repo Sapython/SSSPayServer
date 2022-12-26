@@ -1515,8 +1515,9 @@ def getAepsBalanceEnquiry():
         return jsonify({'error': "We didn't received your data in json format "}), 400
     try:
         requestData = request.json
-        mainTransactionData = transactionInstance.getTransaction(
-            requestData['uid'], requestData['transactionId'])['extraData']
+        actualTransactionData = transactionInstance.getTransaction(
+            requestData['uid'], requestData['transactionId'])
+        mainTransactionData = actualTransactionData['extraData']
         transactionData = mainTransactionData['aepsData']
         transactionData['data'] = transactionData['data'].replace('{PID=', '')
         transactionData['data'] = transactionData['data'].replace('}', '')
@@ -1536,7 +1537,7 @@ def getAepsBalanceEnquiry():
         ## logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(mainTransactionData, request.json['uid'])
+            commissionManager.setCommission(actualTransactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
             return response
         else:
@@ -1616,8 +1617,9 @@ def miniStatement():
         return jsonify({'error': "We didn't received your data in json format "}), 400
     try:
         jsonData = request.json
-        mainTransactionData = transactionInstance.getTransaction(
-            jsonData['uid'], jsonData['transactionId'])['extraData']
+        actualTransactionData = transactionInstance.getTransaction(
+            jsonData['uid'], jsonData['transactionId'])
+        mainTransactionData = actualTransactionData['extraData']
         transactionData = mainTransactionData['aepsData']
         transactionData['data'] = transactionData['data'].replace('{PID=', '')
         transactionData['data'] = transactionData['data'].replace('}', '')
@@ -1637,7 +1639,7 @@ def miniStatement():
         logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(mainTransactionData, request.json['uid'])
+            commissionManager.setCommission(actualTransactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:
@@ -1714,8 +1716,9 @@ def aadhaarPay():
         return jsonify({'error': "We didn't received your data in json format "}), 400
     try:
         jsonData = request.json
-        mainTransactionData = transactionInstance.getTransaction(
-            jsonData['uid'], jsonData['transactionId'])['extraData']
+        actualTransactionData = transactionInstance.getTransaction(
+            jsonData['uid'], jsonData['transactionId'])
+        mainTransactionData = actualTransactionData['extraData']
         transactionData = mainTransactionData['aepsData']
         transactionData['data'] = transactionData['data'].replace('{PID=', '')
         transactionData['data'] = transactionData['data'].replace('}', '')
@@ -1735,7 +1738,7 @@ def aadhaarPay():
         #logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(mainTransactionData, request.json['uid'])
+            commissionManager.setCommission(actualTransactionData, request.json['uid'])
             transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
             return response
         else:

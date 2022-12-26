@@ -185,6 +185,8 @@ class AEPS:
         # self.logging.info(payload)
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/cashwithdraw/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
         print('-'*20)
+        print("Response status",response.status_code)
+        print("Response json",response.headers)
         if ('application/json' in response.headers.get('Content-Type', '')):
             try:
                 print('Response',response.json())
