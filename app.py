@@ -1,8 +1,3 @@
-"""
-SSSPay payment server
-"""
-
-version = "1.0.0"
 import datetime
 import logging
 import os
@@ -39,6 +34,9 @@ from firebase_admin import firestore
 from google.cloud.firestore_v1 import Increment
 import builtins
 import traceback
+
+version = "1.0.0"
+
 def print(*objs, **kwargs):
     my_prefix = "VER: "+version
     builtins.print(my_prefix, *objs, **kwargs)
@@ -545,36 +543,28 @@ def expressPayout():
                 transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
             # print("ACTUAL RESPONSE", responseData)
             if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
-                message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
-                    transactionValue['extraData']['customerId']) + ' is pending. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.pendingTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                    request.json['uid'], request.json['transactionId'], responseData[0])
                 return {"queued": "Payout created successfully","data":responseData}, 200
             elif (responseData[0]['status'] == 'processed'):
-                message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
-                    transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-                if ((transactionValue['serviceType'] == 'payoutUPI' ) or (transactionValue['serviceType'] == 'payoutUPI')):
+                if ((transactionValue['serviceType'] == 'payoutUPI' ) or (transactionValue['serviceType'] == 'payoutImps')):
                     if (transactionValue['extraData']['dailyPayoutTime']):
-                        if (datetime.datetime.now().strftime("%d/%m/%Y") != transactionValue['extraData']['dailyPayoutTime']):
+                        if (datetime.datetime.now().strftime("%d/%m/%Y") == transactionValue['extraData']['dailyPayoutTime']):
                             commissionManager.setCommission(transactionValue, request.json['uid'])
                     # get date in dd/mm/yyyy format
                 fs.collection('users').document(request.json['uid']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
                 transactionInstance.completeTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                    request.json['uid'], request.json['transactionId'], responseData[0])
                 return {"success": "Payout created successfully","data":responseData}, 200
             elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
-                message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
-                    transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                    request.json['uid'], request.json['transactionId'], responseData[0])
                 return {"failed": "Payout cancelled","data":responseData}, 200
             return responseData, 200
         except Exception as e:
             ## logging.error(e)
-            message = 'Express Payout of amount '+str(transactionValue['amount'])+' for ' + str(
-                    transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
             transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                    request.json['uid'], request.json['transactionId'], responseData[0])
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -635,30 +625,24 @@ def completeDailyPayout():
                 transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
             print("ACTUAL RESPONSE", responseData)
             if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
-                message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
-                    transactionValue['extraData']['customerId']) + ' is pending. Transaction id of this transaction is '+str(request.json['transactionId'])
                 transactionInstance.pendingTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                    request.json['uid'], request.json['transactionId'], responseData[0])
             elif (responseData[0]['status'] == 'processed'):
-                message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
-                    transactionValue['extraData']['customerId']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
+
                 if ((transactionValue['serviceType'] == 'payoutUPI' ) or (transactionValue['serviceType'] == 'payoutUPI')):
                     if (datetime.datetime.now().strftime("%d/%m/%Y") != transactionValue['extraData']['dailyPayoutTime']):
                         commissionManager.setCommission(transactionValue, request.json['uid'])
                     # get date in dd/mm/yyyy format
                     fs.collection('users').document(request.json['uid']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
                 transactionInstance.completeTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+                    request.json['uid'], request.json['transactionId'], responseData[0])
             elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
-                message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
-                    transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-                transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+
+                transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], responseData[0])
                 return {"success": "Payout created successfully"}
             return responseData
         except Exception as e:
-            message = 'Payout of amount '+str(transactionValue['amount'])+' for ' + str(
-                transactionValue['extraData']['customerId']) + ' is failed. Transaction id of this transaction is '+str(request.json['transactionId'])
-            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], message, 'expressPayout', responseData[0])
+            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], responseData[0])
             ## logging.error(e)
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
@@ -832,24 +816,18 @@ def rechargeLpg():
                                                latitude, longitude, transaction['extraData']['fields'], transaction['extraData'])
             if (response['status'] == True and response['response_code'] == 1):
                 print("status", True,)
-                message = 'LPG payment of amount '+str(amount)+' for ' + str(caNumber) + ' for operator ' + str(
-                    operatorNo) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 commissionManager.setCommission(transaction, request.json['uid'])
                 transactionInstance.completeTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'lpg', response)
+                    request.json['uid'], request.json['transactionId'], response)
                 wallet.deduct_balance(request.json['uid'], amount)
             else:
-                message = 'LPG payment of amount '+str(amount)+' for ' + str(caNumber) + ' for operator ' + str(
-                    operatorNo) + ' is failed. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'lpg', response)
+                    request.json['uid'], request.json['transactionId'], response)
             return jsonify(response), 200
         except Exception as e:
             ## logging.error(e)
-            message = 'LPG payment of amount '+str(amount)+' for ' + str(caNumber) + ' for operator ' + str(
-                    operatorNo) + ' is failed. Transaction id of this transaction is '+str(referenceId)
             transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'lpg', response)
+                    request.json['uid'], request.json['transactionId'], response)
             return jsonify({'error': str(e)}), 400
 
     else:
@@ -976,25 +954,19 @@ def doRecharge():
             print(time.time())
             if (response['status'] == True and response['response_code'] == 1):
                 print("status", True,)
-                message = 'Recharge of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 commissionManager.setCommission(transactionData, request.json['uid'])
                 transactionInstance.completeTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'recharge', response)
+                    request.json['uid'], request.json['transactionId'], response)
                 wallet.deduct_balance(request.json['uid'], amount)
             else:
-                message = 'Recharge of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'recharge', response)
+                    request.json['uid'], request.json['transactionId'], response)
             print("recharge response", response,time.time() - startTime, time.time(), 'Time')
             
             return jsonify(response), 200
         except Exception as e:
-            message = 'Recharge of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
             transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'recharge', response)
+                    request.json['uid'], request.json['transactionId'], response)
             ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
@@ -1085,23 +1057,17 @@ def payBill():
                 operatorNo, caNumber, amount, referenceId, latitude, longitude, fetchedBill)
             print("response", response)
             if (response['status'] == True and response['response_code'] == 1):
-                message = 'Bill payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 commissionManager.setCommission(transaction, request.json['uid'])
                 transactionInstance.completeTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'bbps', response)
+                    request.json['uid'], request.json['transactionId'],response)
                 wallet.deductBalance(request.json['uid'], amount)
             else:
-                message = 'Bill payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'bbps', response)
+                    request.json['uid'], request.json['transactionId'],response)
             return jsonify(response), 200
         except Exception as e:
-            message = 'Bill payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
             transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'bbps', response)
+                    request.json['uid'], request.json['transactionId'],response)
             ## logging.error(e)
             return jsonify({'error': str(e)}), 400
     else:
@@ -1171,23 +1137,17 @@ def payLicBill():
                 caNumber, mode, amount, email, referenceId, latitude, longitude, billFetch)
             print(response)
             if (response['status'] == True and response['response_code'] == 1):
-                message = 'Lic payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 commissionManager.setCommission(transaction, request.json['uid'])
                 transactionInstance.completeTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'lic', response)
+                    request.json['uid'], request.json['transactionId'],response)
                 wallet.deduct_balance(request.json['uid'], amount)
             else:
-                message = 'Lic payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'lic', response)
+                    request.json['uid'], request.json['transactionId'],response)
             return response
         except Exception as e:
-            message = 'Lic payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
             transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'lic', response)
+                    request.json['uid'], request.json['transactionId'],response)
             ## logging.error(e)
             print(e)
             return jsonify({'error': str(e)}), 400
@@ -1272,23 +1232,17 @@ def rechargeFastTag():
                 operatorNo, caNumber, amount, referenceId, latitude, longitude, bill_fetch)
             print(response)
             if (response['status'] == True and response['response_code'] == 1):
-                message = 'FastTag payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is successful. Transaction id of this transaction is '+str(referenceId)
                 commissionManager.setCommission(transaction, request.json['uid'])
                 transactionInstance.completeTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+                    request.json['uid'], request.json['transactionId'], response)
                 wallet.deduct_balance(request.json['uid'], amount)
             else:
-                message = 'FastTag payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
                 transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+                    request.json['uid'], request.json['transactionId'], response)
             return jsonify(response), 200
         except Exception as e:
-            message = 'FastTag payment of amount '+str(amount)+' for ' + str(
-                    caNumber) + ' is failed. Transaction id of this transaction is '+str(referenceId)
             transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
+                    request.json['uid'], request.json['transactionId'], response)
             ## logging.error(e)
             return jsonify({'error': str(e)}), 400
 
@@ -1536,10 +1490,8 @@ def getAepsBalanceEnquiry():
         print(response)
         ## logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
-            message = 'Balance Enquiry is fetched for ' + str(response[0]['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(actualTransactionData, request.json['uid'])
-            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response[0])
-            return response
+            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], response[0])
+            return response[0] , response[1]
         else:
             transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response[0])
             if DEVELOPMENT:
@@ -1586,11 +1538,10 @@ def getAepsCashWithDrawl():
         print(response[0])
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             wallet.add_balance(jsonData['uid'], mainTransactionData['amount'])
-            message = 'Cash Withdrawal for ' + str(response[0]['clientrefno']) + ' of ' + str(mainTransactionData['amount']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             commissionManager.setCommission(mainTransactionData, request.json['uid'])
-            transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], message, 'fastTag', response[0])
+            transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], response[0])
             aeps.withdrawThreeWay(response[0]['clientrefno'],'success')
-            return response
+            return response[0] , response[1]
         elif (response[2]):
             transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], response[0])
             if (response[0]['response_code'] == 0 and response[0]['status']):
@@ -1636,14 +1587,11 @@ def miniStatement():
             mainTransactionData['merchantCode']
         )
         print(response)
-        logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
-            message = 'Mini Statement is fetched for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
-            commissionManager.setCommission(actualTransactionData, request.json['uid'])
-            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
-            return response
+            transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], response)
+            return response[0] , response[1]
         else:
-            transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
+            transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], response)
             if DEVELOPMENT:
                 return jsonify({'error': response[0]['message']}), 400
             return jsonify({'error': "An error occurred","data":response}), 400
@@ -1667,7 +1615,7 @@ def getWithdrawStatus():
         response = aeps.getCashWithdrawStatus(jsonData['referenceNo'])
         print(response)
         if (response[1] == 200 and response[0]['response_code'] == 1):
-            return response
+            return response[0] , response[1]
         else:
             ## logging.error(response[0])
             if DEVELOPMENT:
@@ -1694,7 +1642,7 @@ def withdrawThreeWay():
         print(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             ## logging.info(response)
-            return response
+            return response[0] , response[1]
         else:
             ## logging.error(response)
             if DEVELOPMENT:
@@ -1737,10 +1685,9 @@ def aadhaarPay():
         print(response)
         #logging.info(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
-            message = 'Aadhaar Pay done for ' + str(response['clientrefno']) + ' is successful. Transaction id of this transaction is '+str(request.json['transactionId'])
             commissionManager.setCommission(actualTransactionData, request.json['uid'])
-            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], message, 'fastTag', response)
-            return response
+            transactionInstance.completeTransaction(request.json['uid'], request.json['transactionId'], response)
+            return response[0] , response[1]
         else:
             transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
             if DEVELOPMENT:
@@ -1766,7 +1713,7 @@ def aadhaarPayStatus():
         response = aeps.aadhaarPayStatus(jsonData['referenceId'])
         print(response)
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
-            return response
+            return response[0] , response[1]
         else:
             ## logging.error(response)
             if DEVELOPMENT:
@@ -1879,6 +1826,13 @@ def razorpayCallback():
         if (request.json["event"].startswith('payout.') and request.json["event"]!='payout.updated'):
             fs.collection("users").document(request.json["payload"]["payout"]["entity"]["notes"]["userId"]).collection("transaction").document(request.json["payload"]["payout"]["entity"]["reference_id"]).update({"newPayoutStatus":{**request.json["payload"]["payout"]["entity"],"event":request.json["event"]}})
             if (request.json["event"]=='payout.processed'):
+                transactionValue = transactionInstance.getTransaction(request.json["payload"]["payout"]["entity"]["notes"]['userId'],request.json["payload"]["payout"]["entity"]["reference_id"])
+                if ((transactionValue['serviceType'] == 'payoutUPI' ) or (transactionValue['serviceType'] == 'payoutImps')):
+                    if (transactionValue['extraData']['dailyPayoutTime']):
+                        if (datetime.datetime.now().strftime("%d/%m/%Y") == transactionValue['extraData']['dailyPayoutTime']):
+                            commissionManager.setCommission(transactionValue, request.json["payload"]["payout"]["entity"]["notes"]['userId'])
+                    # get date in dd/mm/yyyy format
+                fs.collection('users').document(request.json["payload"]["payout"]["entity"]["notes"]['userId']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
                 wallet.deduct_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],request.json["payload"]["payout"]["entity"]["amount"]/100)
     return {"done":True,"status":200}
 
@@ -1912,9 +1866,7 @@ def qrStatus():
         response = upi.checkStatus(request.json['transactionId'],request.json['date'])
         print(response, response.json())
         if (response.json()['status']==True):
-            message = "Your upi transaction " + \
-                request.json['transactionId'] + " is successful"
-            transactionInstance.completeTransaction(request.json['uid'],request.json['transactionId'],message,'qr',response.json())
+            transactionInstance.completeTransaction(request.json['uid'],request.json['transactionId'],response.json())
             return response.json(), 200
         else:
             transactionInstance.failedTransaction(request.json['uid'],request.json['transactionId'],response.json())
@@ -2014,11 +1966,11 @@ def checkEmail():
 def resetPassword():
     try:
         requestData = request.json
-        if (not request.is_json):
+        if not request.is_json:
             return jsonify({'error': "We didn't received your data in json format "}), 400
-        if (not requestData['uid']):
+        if not requestData['uid']:
             return jsonify({'error': "User id is required"}), 400
-        if (not requestData['password']):
+        if not requestData['password']:
             return jsonify({'error': "Password is required"}), 400
         return userManagement.resetPassword(requestData['uid'],requestData['password'])
     except Exception as e:
@@ -2037,6 +1989,23 @@ def userAdd():
             return jsonify({'error': e}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
+
+@app.route('/verifyUpi',methods=['POST'])
+def verifyUpi():
+    auth = authorize()
+    if(auth[1] != 200):
+        return jsonify(auth[0]), auth[1]
+    try:
+        requestData = request.json
+        if not request.is_json:
+            return jsonify({'error': "We didn't received your data in json format "}), 400
+        if not requestData['vpa']:
+            return jsonify({'error': "Vpa is required"}), 400
+        return payout.verifyUpi(requestData['vpa'])
+    except Exception as e:
+        if DEVELOPMENT:
+            return jsonify({'error': e}), 400
+        return jsonify({'error': "We didn't received your data in json format "}), 400
 
 if __name__ == '__main__':
     server_port = os.environ.get('PORT', '8081')

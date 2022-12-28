@@ -19,15 +19,15 @@ class Transaction:
     def getTransaction(self, userId: str, transactionId: str):
         return self.fs.collection('users').document(userId).collection('transaction').document(transactionId).get().to_dict()
 
-    def pendingTransaction(self, userId: str, transactionId: str, message: str, paymentType: str, successData: dict):
+    def pendingTransaction(self, userId: str, transactionId: str, successData: dict):
         process = Thread(target=self.pendingTransactionProcess, args=(
-            userId, transactionId, message, paymentType, successData))
+            userId, transactionId, successData))
         self.processes.append(process)
         process.start()
 
-    def completeTransaction(self, userId: str, transactionId: str, message: str, paymentType: str, successData: dict):
+    def completeTransaction(self, userId: str, transactionId: str, successData: dict):
         process = Thread(target=self.completeTransactionProcess, args=(
-            userId, transactionId, message, paymentType, successData))
+            userId, transactionId, successData))
         self.processes.append(process)
         process.start()
 
@@ -54,7 +54,7 @@ class Transaction:
                 })
             print('Transaction completed', time.time() - startTime)
 
-    def pendingTransactionProcess(self, userId: str, transactionId: str, message: str, paymentType: str, successData: dict):
+    def pendingTransactionProcess(self, userId: str, transactionId: str, successData: dict):
         startTime = time.time()
         userData = self.fs.collection('users').document(userId).get().to_dict()
         print("userId", userId, "userData", userData)
@@ -70,7 +70,7 @@ class Transaction:
             })
         print('Transaction completed', time.time() - startTime)
 
-    def completeTransactionProcess(self, userId: str, transactionId: str, message: str, paymentType: str, successData: dict):
+    def completeTransactionProcess(self, userId: str, transactionId: str, successData: dict):
         startTime = time.time()
         userData = self.fs.collection('users').document(userId).get().to_dict()
         if (userData):

@@ -37,7 +37,7 @@ class Payout:
         response = requests.request("POST", self.createAccountURL, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def getAllAccounts(self):
         url = "https://api.razorpay.com/v1/contacts"
@@ -45,7 +45,7 @@ class Payout:
         response = requests.request("GET", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def getAccount(self, accountId):
         url = f"https://api.razorpay.com/v1/contacts/{accountId}"
@@ -56,7 +56,7 @@ class Payout:
         response = requests.request("GET", url, auth=(
             self.keyId, self.secretKey), headers=headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def updateAccount(self, requestData):
         url = f"https://api.razorpay.com/v1/contacts/{requestData['accountId']}"
@@ -72,7 +72,7 @@ class Payout:
         response = requests.request("PATCH", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def activateAccount(self, accountId):
         url = f"https://api.razorpay.com/v1/contacts/{accountId}"
@@ -82,7 +82,7 @@ class Payout:
         response = requests.request("PATCH", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def deactivateAccount(self, accountId):
         url = f"https://api.razorpay.com/v1/contacts/{accountId}"
@@ -92,7 +92,7 @@ class Payout:
         response = requests.request("PATCH", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def connectFundAccount(self, requestData):
         url = "https://api.razorpay.com/v1/fund_accounts"
@@ -130,7 +130,7 @@ class Payout:
         response = requests.request("POST", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def getAllFundAccounts(self):
         url = "https://api.razorpay.com/v1/fund_accounts"
@@ -139,7 +139,7 @@ class Payout:
             "GET", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def getFundAccountById(self,fa_id):
         url = "https://api.razorpay.com/v1/fund_accounts/{fa_id}"
@@ -148,7 +148,7 @@ class Payout:
             "GET", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def createPayout(self, requestData, purpose):
         url = "https://api.razorpay.com/v1/payouts"
@@ -171,7 +171,7 @@ class Payout:
             "POST", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def getAllPayouts(self,account_number):
         url = "https://api.razorpay.com/v1/payouts?account_number={account_number}"
@@ -180,7 +180,7 @@ class Payout:
             "GET", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def getPayoutById(self, payoutId):
         url = "https://api.razorpay.com/v1/payouts/{payoutId}"
@@ -189,7 +189,7 @@ class Payout:
             "GET", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
 
     def cancelQueuedPayout(self,pout_id):
         url = "https://api.razorpay.com/v1/payouts/{pout_id}/cancel"
@@ -198,7 +198,18 @@ class Payout:
             "POST", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print(response.text, response.status_code)
-        return response.json, response.status_code
+        return response.json(), response.status_code
+
+    def verifyUpi(self,upiId):
+        url = "https://api.razorpay.com/v1/payments/validate/vpa"
+        payload = json.dumps({
+            "vpa": upiId
+        })
+        response = requests.request(
+            "POST", url, auth=(
+            self.keyId, self.secretKey), headers=self.headers, data=payload)
+        print(response.text, response.status_code)
+        return response.json(), response.status_code
 
     def quickPayout(self, requestData, payoutType, Idempotency):
         url = f"https://api.razorpay.com/v1/payouts"
@@ -287,7 +298,9 @@ class Payout:
             "notes": {
                 "userId": requestData['uid'],
                 "payoutType": payoutType,
-                "customerId": requestData['extraData']['customerId']
+                "customerId": requestData['extraData']['customerId'],
+                "serviceType":requestData['serviceType'],
+                "dailyPayoutTime":requestData['extraData']['dailyPayoutTime'],
             }
         })
         print('-'*20)
