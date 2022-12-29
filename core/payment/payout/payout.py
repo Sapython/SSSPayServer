@@ -212,6 +212,7 @@ class Payout:
         return response.json(), response.status_code
 
     def quickPayout(self, requestData, payoutType, Idempotency):
+        print(requestData)
         url = f"https://api.razorpay.com/v1/payouts"
         if (payoutType == 'bank_account'):
             fundAccountData = {

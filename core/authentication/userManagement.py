@@ -110,8 +110,6 @@ class UserManagement:
             return {'error': 'User does not exist', 'requestCode': 4}, 400
 
     def createUser(self, userData: dict):
-        if not userData['uid']:
-            return {'error': 'Missing uid'}, 400
         if not userData['displayName']:
             return {'error': 'Missing displayName'}, 400
         if not userData['email']:
@@ -182,15 +180,21 @@ class UserManagement:
             },
             "messageToken": ""
         }
+        try:
+            user = self.auth.get_user_by_email(userData['email'])
+        except:
+            print("User does not exist")
+            user = None
+        userData['uid'] = user.uid if user else 'nouser'
+        print("User data",userData["uid"])
         if userData['access'] in self.accessLevels:
             user = self.firestore.collection(
                 'users').document(userData['uid'])
             doc = user.get()
-            if doc.exists:
+            if doc!=None and doc.exists:
                 return {'error': 'User already exists'}, 400
             else:
                 user = self.auth.create_user(
-                    uid=userData['uid'],
                     email=userData['email'],
                     email_verified=False,
                     password=password,
