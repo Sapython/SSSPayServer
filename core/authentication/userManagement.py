@@ -191,10 +191,32 @@ class UserManagement:
             user = self.firestore.collection(
                 'users').document(userData['uid'])
             doc = user.get()
+            uidNumber = self.firestore.collection('uidCounter').document('counter').get().to_dict()['counter']
+            # 'admin'
+            # 'superDistributor',
+            # 'masterDistributor',
+            # 'distributor',
+            # 'retailer',
+            # 'guest',
+            accessShortCode = ""
+            if userData['access'] == 'admin':
+                accessShortCode = 'ADM'
+            elif userData['access'] == 'superDistributor':
+                accessShortCode = 'SD'
+            elif userData['access'] == 'masterDistributor':
+                accessShortCode = 'MD'
+            elif userData['access'] == 'distributor':
+                accessShortCode = 'D'
+            elif userData['access'] == 'retailer':
+                accessShortCode = 'R'
+            elif userData['access'] == 'guest':
+                accessShortCode = 'G'
+            uid = 'SSSPAY'+accessShortCode+str(uidNumber)
             if doc!=None and doc.exists:
                 return {'error': 'User already exists'}, 400
             else:
                 user = self.auth.create_user(
+                    uid=uid,
                     email=userData['email'],
                     email_verified=False,
                     password=password,
@@ -203,6 +225,7 @@ class UserManagement:
                     disabled=False,
                     phone_number='+91'+userData['phoneNumber']
                 )
+                self.firestore.collection('uidCounter').document('counter').update({'counter': firestore.Increment(1)})
                 data['userId'] = user.uid
                 # message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY"
                 message = ("Successfully Registered With SSSPay.Your UserID is {name} and Password is {password} do not disclose to anyone").format(

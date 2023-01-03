@@ -218,15 +218,16 @@ class Payout:
         print(requestData)
         url = f"https://api.razorpay.com/v1/payouts"
         charge = self.commisionManager.getAmount(requestData,requestData['uid'])
+        print("TOTAL CHARGE",charge)
         self.fs.collection('users').document(requestData['uid']).collection('transaction').document(requestData['referenceId']).update({
-            "additionalCharge":-charge
+            "additionalAmount":-charge
         })
         self.fs.collection('users').document(requestData['uid']).collection('wallet').document('wallet').update({
             'balance': firestore.Increment(-charge)
         })
         requestData['amount'] = requestData['amount'] - charge
         if (requestData['amount'] <= 0):
-            return None, None, None
+            return {"error":"Not enough balance.","message":"Not enough balance."}, 400
         if (payoutType == 'bank_account'):
             fundAccountData = {
                 "account_type": "bank_account",
@@ -283,14 +284,13 @@ class Payout:
             }
         else:
             raise Exception("Invalid payout type")
-            return None, None, None
         if requestData['extraData']['accountType'] == 'bank_account':
             # accountNumber = "000405657647"
             accountNumber = "4564563801628609"
         elif requestData['extraData']['accountType'] == 'vpa':
             accountNumber = "4564563801628609"
         else:
-            return {"Wrong account type"}, 400
+            return {"error":"Wrong account type"}, 400
         print("customerId",requestData['extraData']['customerId'])
         print("paymentType",requestData['extraData']['paymentType'])
         if (requestData['extraData']['paymentType'] == None):

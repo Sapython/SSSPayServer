@@ -539,7 +539,10 @@ def expressPayout():
         transactionValue['referenceId'] = request.json['transactionId']
         transactionValue['uid'] = request.json['uid']
         try:
-            responseData = payout.quickPayout(transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
+            response = payout.quickPayout(transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
+            if (response['error'] is not None):
+                transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
+                return {'error': response['error']}, 400
             # print("ACTUAL RESPONSE", responseData)
             # if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
             #     transactionInstance.pendingTransaction(
@@ -559,7 +562,7 @@ def expressPayout():
             #     transactionInstance.failedTransaction(
             #         request.json['uid'], request.json['transactionId'], responseData[0])
             #     return {"failed": "Payout cancelled","data":responseData}, 200
-            return responseData, 200
+            # return responseData, 200
         except Exception as e:
             ## logging.error(e)
             transactionInstance.failedTransaction(
@@ -1827,8 +1830,11 @@ def razorpayCallback():
                 transactionValue = transactionInstance.getTransaction(request.json["payload"]["payout"]["entity"]["notes"]['userId'],request.json["payload"]["payout"]["entity"]["reference_id"])
                 if (transactionValue['serviceType'] in ['expressPayoutUpi','expressPayoutImps','payoutImps','payoutUPI']):
                     if (transactionValue['extraData']['dailyPayoutTime']):
-                        if (datetime.datetime.now().strftime("%d/%m/%Y") == transactionValue['extraData']['dailyPayoutTime']):
-                            commissionManager.setCommission(transactionValue, request.json["payload"]["payout"]["entity"]["notes"]['userId'],request.json["payload"]["payout"]["entity"]["reference_id"])
+                        if (datetime.datetime.now().strftime("%d/%m/%Y") != transactionValue['extraData']['dailyPayoutTime']):
+                            wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'])
+                            # commissionManager.setCommission(transactionValue, request.json["payload"]["payout"]["entity"]["notes"]['userId'],request.json["payload"]["payout"]["entity"]["reference_id"])
+                    else:
+                        wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'])
                     # get date in dd/mm/yyyy format
                 fs.collection('users').document(request.json["payload"]["payout"]["entity"]["notes"]['userId']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
                 wallet.deduct_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],request.json["payload"]["payout"]["entity"]["amount"]/100)
@@ -1890,7 +1896,7 @@ def commission():
     data = fs.collection("users").document("a7SupfH2A3X5jUjv3TYRhuEWbKx1").collection("transaction").document("eJMmxN6CAbJ983FOeLvg").get()
     print(data)
     
-    return commisionManager.setCommision('0GSa6y4jz9RSuGOgZ0Kj','YpBrnCoe4laoeY1RmTCZ4pupOys2','aeps','17rwVDDLspUNGRgQUYA6')
+    # return commisionManager.setCommision('0GSa6y4jz9RSuGOgZ0Kj','YpBrnCoe4laoeY1RmTCZ4pupOys2','aeps','17rwVDDLspUNGRgQUYA6')
 
 
 @app.route('/resetPassword/generateOtp',methods=['POST'])
