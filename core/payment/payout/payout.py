@@ -3,7 +3,8 @@ import requests
 import datetime
 from firebase_admin import firestore
 from core.authentication.encryption import Encrypt
-from core.authentication.paysprintAuth import PaySprintAuth
+from core.helpers.CommisionAndCharges import CommissionAndCharges
+from firebase_admin import firestore
 
 
 class Payout:
@@ -12,6 +13,8 @@ class Payout:
         # self.keyId = 'rzp_test_iXjGFXuZaNQ1Uk'
         self.keyId = 'rzp_live_tlXdDUmbEQxwf9'
         self.secretKey = '0bbPbrfVDHYc7gJNgCCbBxdr'
+        self.fs = firestore.client()
+        self.commisionManager = CommissionAndCharges()
         self.accountNumberVpa = ""
         self.accountNumberBank = ""
         self.app = app
@@ -214,6 +217,16 @@ class Payout:
     def quickPayout(self, requestData, payoutType, Idempotency):
         print(requestData)
         url = f"https://api.razorpay.com/v1/payouts"
+        charge = self.commisionManager.getAmount(requestData,requestData['uid'])
+        self.fs.collection('users').document(requestData['uid']).collection('transaction').document(requestData['referenceId']).update({
+            "additionalCharge":-charge
+        })
+        self.fs.collection('users').document(requestData['uid']).collection('wallet').document('wallet').update({
+            'balance': firestore.Increment(-charge)
+        })
+        requestData['amount'] = requestData['amount'] - charge
+        if (requestData['amount'] <= 0):
+            return None, None, None
         if (payoutType == 'bank_account'):
             fundAccountData = {
                 "account_type": "bank_account",

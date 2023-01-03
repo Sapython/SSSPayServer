@@ -30,7 +30,7 @@ class CommissionAndCharges:
             self.charges.append(doc.to_dict())
         self.charges_callback_done.set()
         
-    def setCommission(self,transactionData,userId):
+    def setCommission(self,transactionData,userId,transactionId):
         print("Commission Data: ",transactionData)
         members = self.fs.collection('groups').document(transactionData['groupId']).get()
         # print(self.commissions)
@@ -39,6 +39,8 @@ class CommissionAndCharges:
             result = list(sorted(list(filter(lambda x: x['service'] == transactionData['serviceType'], self.commissions)),key=lambda y:y['minimumAmount']))
             print("Commission",result)
             isCommission = True
+        if (not isCommission):
+            return
         elif (transactionData['serviceType'] in ['expressPayoutUpi','expressPayoutImps','payoutImps','payoutUPI']):
             result = list(sorted(list(filter(lambda x: x['service'] == transactionData['serviceType'], self.charges)),key=lambda y:y['minimumAmount']))
             print("Charge",result)
@@ -66,6 +68,7 @@ class CommissionAndCharges:
                     charges.append((finalRes[accesses]/100)*transactionData['amount'])
                 elif finalRes['type']=='fixed':
                     charges.append(finalRes[accesses])
+        totalCharge = 0
         for member in members.to_dict()['members']:
             print("Member",member)
             if(member['access']['access'] in finalRes['accessLevels']):
@@ -74,6 +77,7 @@ class CommissionAndCharges:
                 if (not isCommission):
                     amount = -amount
                 print(amount)
+                totalCharge += amount
                 self.fs.collection('users').document(userId).collection('wallet').document('wallet').update({
                     'balance': firestore.Increment(amount)
                 })
@@ -88,14 +92,19 @@ class CommissionAndCharges:
                     'transactionType': transactionType,
                     'transactionTime': firestore.SERVER_TIMESTAMP
                 })
-        # if (len(charges) > 0):
-        #     for member in members:
-        #         memberData = member.to_dict()
-        #         if(memberData['accessLevel'] in finalRes['accessLevels']):
-        #             self.fs.collection('users').document(userId).collection('members').document(member.id).update({
-        #                 'balance': memberData['balance']+charges[finalRes['accessLevels'].index(memberData['accessLevel'])]
-        #             })
-            
+        
+        self.fs.collection('users').document(userId).collection('transaction').document(transactionId).update({
+            "additionalAmount": totalCharge
+        })
 
-
-    
+    def getAmount(self,transactionData,userId):
+        result = list(sorted(list(filter(lambda x: x['service'] == transactionData['serviceType'], self.charges)),key=lambda y:y['minimumAmount']))
+        print("Charge",result)
+        finalRes = {}
+        user = self.fs.collection('users').document(userId).get().to_dict()
+        for res in result:
+            print("COND",res['maximumAmount'],transactionData['amount'],res['minimumAmount'],(res['maximumAmount'] >= transactionData['amount']),( transactionData['amount'] >= res['minimumAmount']))
+            if((res['maximumAmount'] >= transactionData['amount']) and ( transactionData['amount'] >= res['minimumAmount'])):
+                finalRes = res[user['access']['access']]
+                break
+        return finalRes
