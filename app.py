@@ -1893,10 +1893,9 @@ def sendSMS():
 
 @app.route('/commission',methods=['POST','GET'])
 def commission():
-    data = fs.collection("users").document("a7SupfH2A3X5jUjv3TYRhuEWbKx1").collection("transaction").document("eJMmxN6CAbJ983FOeLvg").get()
-    print(data)
-    
-    # return commisionManager.setCommision('0GSa6y4jz9RSuGOgZ0Kj','YpBrnCoe4laoeY1RmTCZ4pupOys2','aeps','17rwVDDLspUNGRgQUYA6')
+    data = fs.collection("users").document("a7SupfH2A3X5jUjv3TYRhuEWbKx1").collection("transaction").document("0wqtL1nwtmAIMJOlXfoN").get()
+    print(data)   
+    return commissionManager.setCommission(data.to_dict(),'a7SupfH2A3X5jUjv3TYRhuEWbKx1','0wqtL1nwtmAIMJOlXfoN')
 
 
 @app.route('/resetPassword/generateOtp',methods=['POST'])
