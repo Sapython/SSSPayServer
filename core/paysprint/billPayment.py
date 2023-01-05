@@ -52,9 +52,9 @@ class BillPayment:
         response = requests.request(
             "POST", self.fetchBillDetailsUrl, headers=self.auth.generatePaysprintAuthHeaders(), json=payload)
         if (response.json()['response_code'] == 1):
-            return response.json()
+            return response.json(), 200
         else:
-            return response.json()
+            return response.json(), 400
 
     def payBill(self, operatorNo: str, caNumber: str, amount: str, referenceNo: str, latitude: str, longitude: str, billFetched:dict):
         """
