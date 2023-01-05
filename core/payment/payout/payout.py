@@ -214,20 +214,26 @@ class Payout:
         print(response.text, response.status_code)
         return response.json(), response.status_code
 
-    def quickPayout(self, requestData, payoutType, Idempotency):
+    def quickPayout(self, requestData, payoutType):
+        if (requestData['amount'] <= 0 and requestData['amount'] > requestData['balance']):
+            return {"error":"Not enough balance.","message":"Not enough balance."}, 400
+        chargeable = False
+        if (datetime.datetime.now().strftime("%d/%m/%Y") != requestData['extraData']['dailyPayoutTime']):
+            chargeable = True
         print(requestData)
         url = f"https://api.razorpay.com/v1/payouts"
-        charge = self.commisionManager.getAmount(requestData,requestData['uid'])
-        print("TOTAL CHARGE",charge)
+        if (chargeable):
+            charge = self.commisionManager.getAmount(requestData,requestData['uid'])
+            print("TOTAL CHARGE",charge)
+            requestData['amount'] = requestData['amount'] - charge
+        if (requestData['amount'] <= 0 and requestData['amount'] > requestData['balance']):
+            return {"error":"Not enough balance.","message":"Not enough balance."}, 400
         self.fs.collection('users').document(requestData['uid']).collection('transaction').document(requestData['referenceId']).update({
             "additionalAmount":-charge
         })
         self.fs.collection('users').document(requestData['uid']).collection('wallet').document('wallet').update({
-            'balance': firestore.Increment(-charge)
+            'balance': firestore.Increment(-requestData['amount'])
         })
-        requestData['amount'] = requestData['amount'] - charge
-        if (requestData['amount'] <= 0):
-            return {"error":"Not enough balance.","message":"Not enough balance."}, 400
         if (payoutType == 'bank_account'):
             fundAccountData = {
                 "account_type": "bank_account",

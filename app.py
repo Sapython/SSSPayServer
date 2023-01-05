@@ -534,39 +534,18 @@ def expressPayout():
         if (transactionValue['extraData']['customerId'] is None):
             return {'error': 'customerId is required'}, 400
 
-        if (transactionValue['idempotencyKey'] is None):
-            return {'error': 'idempotencyKey is required'}, 400
         transactionValue['referenceId'] = request.json['transactionId']
         transactionValue['uid'] = request.json['uid']
         try:
-            response = payout.quickPayout(transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
+            response = payout.quickPayout(transactionValue, transactionValue['extraData']['accountType'])
             if (response['error'] is not None):
                 transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
                 return {'error': response['error']}, 400
-            # print("ACTUAL RESPONSE", responseData)
-            # if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
-            #     transactionInstance.pendingTransaction(
-            #         request.json['uid'], request.json['transactionId'], responseData[0])
-            #     return {"queued": "Payout created successfully","data":responseData}, 200
-            # elif (responseData[0]['status'] == 'processed'):
-            #     if ((transactionValue['serviceType'] == 'payoutUPI' ) or (transactionValue['serviceType'] == 'payoutImps')):
-            #         if (transactionValue['extraData']['dailyPayoutTime']):
-            #             if (datetime.datetime.now().strftime("%d/%m/%Y") == transactionValue['extraData']['dailyPayoutTime']):
-            #                 commissionManager.setCommission(transactionValue, request.json['uid'],request.json['transactionId'])
-            #         # get date in dd/mm/yyyy format
-            #     fs.collection('users').document(request.json['uid']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
-            #     transactionInstance.completeTransaction(
-            #         request.json['uid'], request.json['transactionId'], responseData[0])
-            #     return {"success": "Payout created successfully","data":responseData}, 200
-            # elif (responseData[0]['status'] == 'cancelled' or responseData[0]['status'] == 'reversed'):
-            #     transactionInstance.failedTransaction(
-            #         request.json['uid'], request.json['transactionId'], responseData[0])
-            #     return {"failed": "Payout cancelled","data":responseData}, 200
-            # return responseData, 200
+            return response[0]
         except Exception as e:
             ## logging.error(e)
             transactionInstance.failedTransaction(
-                    request.json['uid'], request.json['transactionId'], responseData[0])
+                    request.json['uid'], request.json['transactionId'], response[0])
             if DEVELOPMENT:
                 return {'error': str(e)}, 400
             return {'error': 'Invalid token'}, 400
@@ -624,7 +603,7 @@ def completeDailyPayout():
         transactionValue['uid'] = request.json['uid']
         try:
             responseData = payout.quickPayout(
-                transactionValue, transactionValue['extraData']['accountType'], transactionValue['idempotencyKey'])
+                transactionValue, transactionValue['extraData']['accountType'])
             print("ACTUAL RESPONSE", responseData)
             if (responseData[0]['status'] == 'queued' or responseData[0]['status'] == 'pending' or responseData[0]['status'] == 'processing'):
                 transactionInstance.pendingTransaction(
@@ -1893,9 +1872,10 @@ def sendSMS():
 
 @app.route('/commission',methods=['POST','GET'])
 def commission():
-    data = fs.collection("users").document("a7SupfH2A3X5jUjv3TYRhuEWbKx1").collection("transaction").document("0wqtL1nwtmAIMJOlXfoN").get()
+    data = fs.collection("users").document("a7SupfH2A3X5jUjv3TYRhuEWbKx1").collection("transaction").document("NUBJyJKkFWal8Dro61TF").get()
     print(data)   
-    return commissionManager.setCommission(data.to_dict(),'a7SupfH2A3X5jUjv3TYRhuEWbKx1','0wqtL1nwtmAIMJOlXfoN')
+    return commissionManager.setCommission(data.to_dict(),'a7SupfH2A3X5jUjv3TYRhuEWbKx1','NUBJyJKkFWal8Dro61TF')
+    # return commissionManager.getAmount(data.to_dict(),'a7SupfH2A3X5jUjv3TYRhuEWbKx1')
 
 
 @app.route('/resetPassword/generateOtp',methods=['POST'])
