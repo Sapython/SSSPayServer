@@ -1816,7 +1816,6 @@ def razorpayCallback():
                         wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'])
                     # get date in dd/mm/yyyy format
                 fs.collection('users').document(request.json["payload"]["payout"]["entity"]["notes"]['userId']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
-                wallet.deduct_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],request.json["payload"]["payout"]["entity"]["amount"]/100)
     return {"done":True,"status":200}
 
 @app.route('/upi/createPayment', methods=['POST'])
