@@ -6,10 +6,11 @@ import time
 import pytz
 utc = pytz.UTC
 from dateutil import parser
-
+from core.payment.wallet.wallet import Wallet
 class Transaction:
     def __init__(self, app, DEVELOPMENT):
         self.app = app
+        self.walletManager = Wallet()
         self.DEVELOPMENT = DEVELOPMENT
         self.fs = firestore.client()
         self.processes = []
@@ -88,15 +89,10 @@ class Transaction:
             print('Transaction completed', time.time() - startTime)
 
     def checkBalance(self, amount: int, userId: str):
-        user = self.fs.collection('users').document(
-            userId).collection('wallet').document('wallet').get()
-        if user.exists:
-            data = user.to_dict()
-            print("WALLET", data)
-            if data['balance'] >= amount:
-                return True
-            else:
-                return False
+        data = self.walletManager.get_balance(userId)
+        print("BALANCE",data)
+        if data >= amount:
+            return True
         else:
             return False
 

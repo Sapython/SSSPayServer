@@ -2,12 +2,13 @@ import math
 from firebase_admin import firestore
 import time
 import threading
-
+from core.payment.wallet.wallet import Wallet
 
 class CommissionAndCharges:
     def __init__(self):
         self.fs = firestore.client()
         self.commissions = []
+        self.walletManager = Wallet()
         self.commission_callback_done = threading.Event()
         self.commission_col_query = self.fs.collection(u'commissions')
         self.commission_query_watch = self.commission_col_query.on_snapshot(
@@ -19,18 +20,18 @@ class CommissionAndCharges:
             self.charges_on_snapshot)
 
     def commission_on_snapshot(self, col_snapshot, changes, read_time):
-        print(u'Callback received query snapshot.')
+        # print(u'Callback received query snapshot.')
         self.commissions = []
         for doc in col_snapshot:
-            print(u'Document id: {}'.format(doc.id))
+            # print(u'Document id: {}'.format(doc.id))
             self.commissions.append(doc.to_dict())
         self.commission_callback_done.set()
 
     def charges_on_snapshot(self, col_snapshot, changes, read_time):
-        print(u'Callback received query snapshot.')
+        # print(u'Callback received query snapshot.')
         self.charges = []
         for doc in col_snapshot:
-            print(u'Document id: {}'.format(doc.id))
+            # print(u'Document id: {}'.format(doc.id))
             self.charges.append(doc.to_dict())
         self.charges_callback_done.set()
 
@@ -91,9 +92,8 @@ class CommissionAndCharges:
             "commissions": firestore.ArrayUnion(commissions)
         })
         for commission in commissions:
-            self.fs.collection('users').document(userId).collection('wallet').document('wallet').update({
-                'balance': firestore.Increment(amount)
-            })
+            narration = "Commission for "+transactionData['serviceType']+" of amount "+str(transactionData['amount'])+" to "+commission['member']
+            self.walletManager.add_balance(userId,amount,narration,transactionData['serviceType'])
             self.fs.collection('users').document(commission['member']).collection('commissions').add({
                 **transactionData,
                 'exchangeAmount': commission['amount'],
@@ -104,21 +104,6 @@ class CommissionAndCharges:
                 'transactionTime': firestore.SERVER_TIMESTAMP
             })
         return {"commissions": commissions}, 200
-        # self.fs.collection('users').document(userId).collection('wallet').document('wallet').update({
-        #     'balance': firestore.Increment(amount)
-        # })
-        # transactionType = 'credit'
-        # if (not isCommission):
-        #     transactionType = 'debit'
-        # self.fs.collection('groups').document(transactionData['groupId']).collection('transactions').add({
-        #     **transactionData,
-        #     'exchangeAmount': amount,
-        #     'member': member['id'],
-        #     "ownerId": userId,
-        #     'transactionType': transactionType,
-        #     'transactionTime': firestore.SERVER_TIMESTAMP
-        # })
-
 
     def getAmount(self, transactionData, userId):
         # print("self.charges",self.charges)
@@ -133,4 +118,6 @@ class CommissionAndCharges:
             if((res['maximumAmount'] >= transactionData['amount']) and (transactionData['amount'] >= res['minimumAmount'])):
                 finalRes = res[user['access']['access']]
                 break
+        if (finalRes == {}):
+            finalRes = 0
         return finalRes

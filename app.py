@@ -68,7 +68,7 @@ BillPaymentInstance = BillPayment(app)
 LicInstance = LIC(app)
 FastTagInstance = FastTag(app)
 userManagement = UserManagement(auth, app)
-wallet = Wallet(app)
+wallet = Wallet()
 payout = Payout(app)
 transactionInstance = Transaction(app, DEVELOPMENT)
 qr = QR(DEVELOPMENT)
@@ -148,7 +148,8 @@ def addWalletBalance():
             return {'error': 'amount is required'}, 400
         try:
             print(request.json['uid'])
-            wallet.add_balance(request.json['uid'], request.json['amount'])
+            narration = "Balance added by admin"
+            wallet.add_balance(request.json['uid'], request.json['amount'],narration,"other")
             return {"success": "Balance added successfully"}
         except Exception as e:
             ## logging.error(e)
@@ -171,6 +172,7 @@ def deductWalletBalance():
             return {'error': 'amount is required'}, 400
         try:
             print(request.json['uid'])
+            # narration = request.json['narration'] if 'narration' in request.json else None
             wallet.deduct_balance(request.json['uid'], request.json['amount'])
             return {"success": "Balance deducted successfully"}
         except Exception as e:
@@ -799,7 +801,8 @@ def rechargeLpg():
                 commissionManager.setCommission(transaction, request.json['uid'],request.json['transactionId'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], response)
-                wallet.deduct_balance(request.json['uid'], amount)
+                narration = "LPG Recharge of " + str(amount) + " to " + str(caNumber)
+                wallet.deduct_balance(request.json['uid'], amount,narration,'gas')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'], response)
@@ -937,7 +940,8 @@ def doRecharge():
                 commissionManager.setCommission(transactionData, request.json['uid'],request.json['transactionId'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], response)
-                wallet.deduct_balance(request.json['uid'], amount)
+                narration = "Mobile Recharge of " + str(amount) + " to " + str(caNumber)
+                wallet.deduct_balance(request.json['uid'], amount,narration,'mobile_recharge')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'], response)
@@ -1120,7 +1124,8 @@ def payLicBill():
                 commissionManager.setCommission(transaction, request.json['uid'],request.json['transactionId'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'],response)
-                wallet.deduct_balance(request.json['uid'], amount)
+                narration = "Lic payment for caNumber: " + str(caNumber) + " amount: " + str(amount)
+                wallet.deduct_balance(request.json['uid'], amount,narration,'lic')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'],response)
@@ -1215,7 +1220,8 @@ def rechargeFastTag():
                 commissionManager.setCommission(transaction, request.json['uid'],request.json['transactionId'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], response)
-                wallet.deduct_balance(request.json['uid'], amount)
+                narration = "FastTag payment for caNumber: " + str(caNumber) + " amount: " + str(amount)
+                wallet.deduct_balance(request.json['uid'], amount,narration,'fastTag')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'], response)
@@ -1517,9 +1523,10 @@ def getAepsCashWithDrawl():
         )
         print(response[0])
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
-            wallet.add_balance(jsonData['uid'], mainTransactionData['amount'])
-            commissionManager.setCommission(mainTransactionData, request.json['uid'],request.json['transactionId'])
             transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], response[0])
+            narration = "Cash Withdrawal of Rs. " + str(mainTransactionData['amount']) + " from " + str(mainTransactionData['extraData']['merchantCode'])
+            wallet.add_balance(jsonData['uid'], mainTransactionData['amount'],narration,'aeps')
+            commissionManager.setCommission(mainTransactionData, request.json['uid'],request.json['transactionId'])
             aeps.withdrawThreeWay(response[0]['clientrefno'],'success')
             return response[0] , response[1]
         elif (response[2]):
@@ -1533,6 +1540,7 @@ def getAepsCashWithDrawl():
             return jsonify({'error': "An error occurred","data":response}), 400
     except Exception as e:
         #logging.error(e)
+        print(e)
         transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], response[0])
         if DEVELOPMENT:
             return jsonify({'error': str(e)}), 400
@@ -1810,10 +1818,12 @@ def razorpayCallback():
                 if (transactionValue['serviceType'] in ['expressPayoutUpi','expressPayoutImps','payoutImps','payoutUPI']):
                     if (transactionValue['extraData']['dailyPayoutTime']):
                         if (datetime.datetime.now().strftime("%d/%m/%Y") != transactionValue['extraData']['dailyPayoutTime']):
-                            wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'])
+                            narration = "Refund for free daily payout for "+transactionValue['serviceType']+" to "+request.json["payload"]["payout"]["entity"]["notes"]["userId"]
+                            wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'],narration,'aeps')
                             # commissionManager.setCommission(transactionValue, request.json["payload"]["payout"]["entity"]["notes"]['userId'],request.json["payload"]["payout"]["entity"]["reference_id"])
                     else:
-                        wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'])
+                        narration = "Refund for free daily payout for "+transactionValue['serviceType']+" to "+request.json["payload"]["payout"]["entity"]["notes"]["userId"]
+                        wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'],narration,'aeps')
                     # get date in dd/mm/yyyy format
                 fs.collection('users').document(request.json["payload"]["payout"]["entity"]["notes"]['userId']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
     return {"done":True,"status":200}

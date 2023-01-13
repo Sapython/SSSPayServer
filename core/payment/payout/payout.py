@@ -2,7 +2,7 @@ import json
 import requests
 import datetime
 from firebase_admin import firestore
-from core.authentication.encryption import Encrypt
+from core.payment.wallet.wallet import Wallet
 from core.helpers.CommisionAndCharges import CommissionAndCharges
 from firebase_admin import firestore
 
@@ -14,6 +14,7 @@ class Payout:
         self.keyId = 'rzp_live_tlXdDUmbEQxwf9'
         self.secretKey = '0bbPbrfVDHYc7gJNgCCbBxdr'
         self.fs = firestore.client()
+        self.walletManager = Wallet()
         self.commisionManager = CommissionAndCharges()
         self.accountNumberVpa = ""
         self.accountNumberBank = ""
@@ -228,12 +229,12 @@ class Payout:
             requestData['amount'] = requestData['amount'] - charge
         if (requestData['amount'] <= 0 and requestData['amount'] > requestData['balance']):
             return {"error":"Not enough balance.","message":"Not enough balance."}, 400
-        self.fs.collection('users').document(requestData['uid']).collection('transaction').document(requestData['referenceId']).update({
-            "additionalAmount":-charge
-        })
-        self.fs.collection('users').document(requestData['uid']).collection('wallet').document('wallet').update({
-            'balance': firestore.Increment(-requestData['amount'])
-        })
+        if (chargeable):
+            self.fs.collection('users').document(requestData['uid']).collection('transaction').document(requestData['referenceId']).update({
+                "additionalAmount":-charge
+            })
+        narration = requestData['serviceType']+" to " + requestData['extraData']['account']['name'] + " for " + requestData['extraData']['account']['email'] + " on " + datetime.datetime.now().strftime("%d/%m/%Y")
+        self.walletManager.deduct_balance(requestData['uid'],requestData['amount'],narration,requestData['serviceType'])
         if (payoutType == 'bank_account'):
             fundAccountData = {
                 "account_type": "bank_account",
@@ -329,4 +330,11 @@ class Payout:
         response = requests.request("POST", url, auth=(
             self.keyId, self.secretKey), headers=self.headers, data=payload)
         print("response.text",response.text,"response.status",response.status_code)
-        return response.json(), response.status_code
+        data = {**response.json()}
+        if (data['error']['reason']!=None):
+            narration = "Refund for " + requestData['serviceType'] + " of transaction id " + requestData['referenceId'] + " on " + datetime.datetime.now().strftime("%d/%m/%Y")
+            self.walletManager.add_balance(requestData['uid'],requestData['amount'],narration,requestData['serviceType'])
+            print("Adding refund")
+            data['error']["refundAmount"] = requestData['amount']
+        print("FINAL RES",data)
+        return data, response.status_code

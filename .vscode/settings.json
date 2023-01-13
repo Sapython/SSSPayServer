@@ -4,5 +4,6 @@
         "ndnd",
         "paysprint",
         "razorpay"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "off"
 }
