@@ -39,9 +39,17 @@ class CommissionAndCharges:
         # print("Commission Data: ",transactionData)
         access = ['admin', 'superDistributor', 'masterDistributor',
                   'distributor', 'retailer', 'guest']
-        members = self.fs.collection('groups').document(
-            transactionData['groupId']).get()
-        # print(self.commissions)
+        # get current user
+        currentUser = self.fs.collection('users').document(userId).get().to_dict()
+        users = [currentUser]
+        user = currentUser.copy()
+        while user.get('ownerId'):
+            user = self.fs.collection('users').document(user['ownerId']).get().to_dict()
+            if(user.get('ownerId') == user['userId']):
+                break
+            if (user.get('access').get('access') == 'admin'):
+                break
+            users.append(user)
         if (transactionData['serviceType'] in ['dth', 'mobile_recharge', 'aeps']):
             result = list(sorted(list(filter(
                 lambda x: x['service'] == transactionData['serviceType'], self.commissions)), key=lambda y: y['minimumAmount']))
@@ -50,21 +58,14 @@ class CommissionAndCharges:
             if((res['maximumAmount'] >= transactionData['amount']) and (transactionData['amount'] >= res['minimumAmount'])):
                 finalRes = res
                 break
-        
         try:
             res = finalRes['accessLevels']
         except:
             print("No Commission charges set for price range")
             return "No Commission charges set for price range"
         charges = []
-        # # print("finalRes",finalRes)
-        # # get current member using userId
-        access = finalRes['accessLevels']
-        user = list(filter(lambda x: x['id'] ==
-                    userId, members.to_dict()['members']))
-        validAccess = access[0:access.index(user[0]['access']['access'])+1]
         if(finalRes):
-            for accesses in validAccess:
+            for accesses in finalRes['accessLevels']:
                 if(finalRes['type'] == 'percentage'):
                     charges.append({
                         "access":accesses,
@@ -76,14 +77,14 @@ class CommissionAndCharges:
                         "amount":finalRes[accesses]
                     })
         commissions = []
-        for member in members.to_dict()['members']:
-            if(member['access']['access'] in validAccess):
-                amount = charges[validAccess.index(member['access']['access'])]['amount']
+        for member in users:
+            if(member['access']['access'] in finalRes['accessLevels']):
+                amount = charges[finalRes['accessLevels'].index(member['access']['access'])]['amount']
                 if (amount > 0):
-                    if len(list(filter(lambda x: x['member'] == member['id'], commissions))) == 0:
-                        if ((member['access']['access'] == 'retailer' and member['id'] == userId) or member['access']['access'] != 'retailer') and member['access']['access'] in validAccess:
+                    if len(list(filter(lambda x: x['member'] == member['userId'], commissions))) == 0:
+                        if ((member['access']['access'] == 'retailer' and member['userId'] == userId) or member['access']['access'] != 'retailer') and member['access']['access'] in finalRes['accessLevels']:
                             commissions.append({
-                                "member": member['id'],
+                                "member": member['userId'],
                                 "amount": amount,
                                 "name": member['displayName'],
                                 "access": member['access']['access']
@@ -92,8 +93,9 @@ class CommissionAndCharges:
             "commissions": firestore.ArrayUnion(commissions)
         })
         for commission in commissions:
-            narration = "Commission for "+transactionData['serviceType']+" of amount "+str(transactionData['amount'])+" to "+commission['member']
+            narration = "Commission for "+transactionData['serviceType']+" of amount "+str(transactionData['amount'])+" to "+commission['member'] + " by " + currentUser['userId']
             self.walletManager.add_balance(userId,amount,narration,transactionData['serviceType'])
+            self.fs.collection('users').document(userId).update({"totalCommission": firestore.Increment(commission['amount'])})
             self.fs.collection('users').document(commission['member']).collection('commissions').add({
                 **transactionData,
                 'exchangeAmount': commission['amount'],

@@ -1881,9 +1881,9 @@ def sendSMS():
 
 @app.route('/commission',methods=['POST','GET'])
 def commission():
-    data = fs.collection("users").document("a7SupfH2A3X5jUjv3TYRhuEWbKx1").collection("transaction").document("NUBJyJKkFWal8Dro61TF").get()
+    data = fs.collection("users").document("SSSPAYR6").collection("transaction").document("1vvMYhKZ0leOtv2ZsXLr").get()
     print(data)   
-    return commissionManager.setCommission(data.to_dict(),'a7SupfH2A3X5jUjv3TYRhuEWbKx1','NUBJyJKkFWal8Dro61TF')
+    return commissionManager.setCommission(data.to_dict(),'SSSPAYR6','1vvMYhKZ0leOtv2ZsXLr')
     # return commissionManager.getAmount(data.to_dict(),'a7SupfH2A3X5jUjv3TYRhuEWbKx1')
 
 
