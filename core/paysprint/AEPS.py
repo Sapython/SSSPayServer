@@ -182,6 +182,22 @@ class AEPS:
         payload = {
             "body":encoded
         }
+        # fakeData = {
+        #     "name": "SUMIT SETH",
+        #     "last_aadhar": "3327",
+        #     "bankiin": "608032",
+        #     "status": True,
+        #     "errorcode": "0",
+        #     "message": "AEPS Transaction Success",
+        #     "mobile": "8604863246",
+        #     "clientrefno": "595788604863246",
+        #     "balanceamount": "12.09",
+        #     "bankrrn": "301319095611",
+        #     "amount": 100,
+        #     "ackno": 39576647,
+        #     "response_code": 1
+        # }
+        # return fakeData, 200, True
         # self.logging.info(payload)
         response = requests.post("https://api.paysprint.in/api/v1/service/aeps/cashwithdraw/index",data=payload,headers=self.auth.generatePaysprintAuthHeaders())
         print('-'*20)

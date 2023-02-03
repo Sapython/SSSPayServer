@@ -230,6 +230,13 @@ class UserManagement:
                 # message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY"
                 message = ("Successfully Registered With SSSPay.Your UserID is {name} and Password is {password} do not disclose to anyone").format(
                     name=userData['email'], password=password)
+                # print()
+                # add this to csv file
+                # import csv
+                # with open('user.csv', 'a+') as csvFile:
+                #     writer = csv.writer(csvFile)
+                #     writer.writerow([userData['email'], password])
+                # csvFile.close()
                 self.messaging.sendSingleSMS(message, userData['phoneNumber'])
                 self.firestore.collection('users').document(
                     data['userId']).set(data)

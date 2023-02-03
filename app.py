@@ -149,7 +149,7 @@ def addWalletBalance():
         try:
             print(request.json['uid'])
             narration = "Balance added by admin"
-            wallet.add_balance(request.json['uid'], request.json['amount'],narration,"other")
+            wallet.add_balance(request.json['uid'], request.json['amount'],narration,"other",'Direct-Credit')
             return {"success": "Balance added successfully"}
         except Exception as e:
             ## logging.error(e)
@@ -1524,10 +1524,12 @@ def getAepsCashWithDrawl():
         print(response[0])
         if (response[2] and response[0]['response_code'] == 1 and response[1] == 200):
             transactionInstance.completeTransaction(jsonData['uid'], jsonData['transactionId'], response[0])
-            narration = "Cash Withdrawal of Rs. " + str(mainTransactionData['amount']) + " from " + str(mainTransactionData['extraData']['merchantCode'])
-            wallet.add_balance(jsonData['uid'], mainTransactionData['amount'],narration,'aeps')
+            narration = "Cash withdrawal amount added in wallet"
+            print("narration",narration)
+            wallet.add_balance(jsonData['uid'], mainTransactionData['amount'],narration,'aeps','Transaction-Credit')
             commissionManager.setCommission(mainTransactionData, request.json['uid'],request.json['transactionId'])
             aeps.withdrawThreeWay(response[0]['clientrefno'],'success')
+            print("Passed everything")
             return response[0] , response[1]
         elif (response[2]):
             transactionInstance.failedTransaction(jsonData['uid'], jsonData['transactionId'], response[0])
@@ -1818,12 +1820,12 @@ def razorpayCallback():
                 if (transactionValue['serviceType'] in ['expressPayoutUpi','expressPayoutImps','payoutImps','payoutUPI']):
                     if (transactionValue['extraData']['dailyPayoutTime']):
                         if (datetime.datetime.now().strftime("%d/%m/%Y") != transactionValue['extraData']['dailyPayoutTime']):
-                            narration = "Refund for free daily payout for "+transactionValue['serviceType']+" to "+request.json["payload"]["payout"]["entity"]["notes"]["userId"]
-                            wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'],narration,'aeps')
+                            narration = "Refund for free daily payout"
+                            wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'],narration,'aeps','Transaction-Refund')
                             # commissionManager.setCommission(transactionValue, request.json["payload"]["payout"]["entity"]["notes"]['userId'],request.json["payload"]["payout"]["entity"]["reference_id"])
                     else:
-                        narration = "Refund for free daily payout for "+transactionValue['serviceType']+" to "+request.json["payload"]["payout"]["entity"]["notes"]["userId"]
-                        wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'],narration,'aeps')
+                        narration = "Refund for free daily payout"
+                        wallet.add_balance(request.json["payload"]["payout"]["entity"]["notes"]["userId"],transactionValue['additionalAmount'],narration,'aeps','Transaction-Refund')
                     # get date in dd/mm/yyyy format
                 fs.collection('users').document(request.json["payload"]["payout"]["entity"]["notes"]['userId']).update({"dailyPayoutTime": datetime.datetime.now().strftime("%d/%m/%Y")})
     return {"done":True,"status":200}
@@ -1881,9 +1883,12 @@ def sendSMS():
 
 @app.route('/commission',methods=['POST','GET'])
 def commission():
-    data = fs.collection("users").document("SSSPAYR6").collection("transaction").document("1vvMYhKZ0leOtv2ZsXLr").get()
+    data = fs.collection("users").document("59SmCH28x9Yc5bWZbVCpxWzJ5LB2").collection("transaction").document("qdi32nIynqF26Z6zmqf4").get()
     print(data)   
-    return commissionManager.setCommission(data.to_dict(),'SSSPAYR6','1vvMYhKZ0leOtv2ZsXLr')
+    return commissionManager.setCommission(data.to_dict(),'59SmCH28x9Yc5bWZbVCpxWzJ5LB2','qdi32nIynqF26Z6zmqf4')
+    data = fs.collection("users").document("59SmCH28x9Yc5bWZbVCpxWzJ5LB2").collection("transaction").document("dwxKWF2o1GJsiSD62Yqx").get()
+    print(data)   
+    return commissionManager.setCommission(data.to_dict(),'59SmCH28x9Yc5bWZbVCpxWzJ5LB2','dwxKWF2o1GJsiSD62Yqx')
     # return commissionManager.getAmount(data.to_dict(),'a7SupfH2A3X5jUjv3TYRhuEWbKx1')
 
 

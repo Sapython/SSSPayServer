@@ -292,8 +292,8 @@ class Payout:
         else:
             raise Exception("Invalid payout type")
         if requestData['extraData']['accountType'] == 'bank_account':
-            # accountNumber = "000405657647"
-            accountNumber = "4564563801628609"
+            accountNumber = "000405657647"
+            # accountNumber = "4564563801628609"
         elif requestData['extraData']['accountType'] == 'vpa':
             accountNumber = "4564563801628609"
         else:
@@ -332,8 +332,8 @@ class Payout:
         print("response.text",response.text,"response.status",response.status_code)
         data = {**response.json()}
         if (data['error']['reason']!=None):
-            narration = "Refund for " + requestData['serviceType'] + " of transaction id " + requestData['referenceId'] + " on " + datetime.datetime.now().strftime("%d/%m/%Y")
-            self.walletManager.add_balance(requestData['uid'],requestData['amount'],narration,requestData['serviceType'])
+            narration = "Refund for payout in the wallet"
+            self.walletManager.add_balance(requestData['uid'],requestData['amount'],narration,requestData['serviceType'],'Transaction-Refund')
             print("Adding refund")
             data['error']["refundAmount"] = requestData['amount']
         print("FINAL RES",data)
