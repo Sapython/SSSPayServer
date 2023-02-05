@@ -802,7 +802,7 @@ def rechargeLpg():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], response)
                 narration = "LPG Recharge of " + str(amount) + " to " + str(caNumber)
-                wallet.deduct_balance(request.json['uid'], amount,narration,'gas')
+                wallet.deduct_balance(request.json['uid'], amount,narration,'gas','Transaction-Debit')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'], response)
@@ -941,7 +941,7 @@ def doRecharge():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], response)
                 narration = "Mobile Recharge of " + str(amount) + " to " + str(caNumber)
-                wallet.deduct_balance(request.json['uid'], amount,narration,'mobile_recharge')
+                wallet.deduct_balance(request.json['uid'], amount,narration,'mobile_recharge','Transaction-Debit')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'], response)
@@ -1125,7 +1125,7 @@ def payLicBill():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'],response)
                 narration = "Lic payment for caNumber: " + str(caNumber) + " amount: " + str(amount)
-                wallet.deduct_balance(request.json['uid'], amount,narration,'lic')
+                wallet.deduct_balance(request.json['uid'], amount,narration,'lic','Transaction-Debit')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'],response)
@@ -1221,7 +1221,7 @@ def rechargeFastTag():
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'], response)
                 narration = "FastTag payment for caNumber: " + str(caNumber) + " amount: " + str(amount)
-                wallet.deduct_balance(request.json['uid'], amount,narration,'fastTag')
+                wallet.deduct_balance(request.json['uid'], amount,narration,'fastTag','Transaction-Debit')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'], response)

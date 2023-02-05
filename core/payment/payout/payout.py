@@ -233,8 +233,8 @@ class Payout:
             self.fs.collection('users').document(requestData['uid']).collection('transaction').document(requestData['referenceId']).update({
                 "additionalAmount":-charge
             })
-        narration = requestData['serviceType']+" to " + requestData['extraData']['account']['name'] + " for " + requestData['extraData']['account']['email'] + " on " + datetime.datetime.now().strftime("%d/%m/%Y")
-        self.walletManager.deduct_balance(requestData['uid'],requestData['amount'],narration,requestData['serviceType'])
+        narration = requestData['serviceType']+" to " + requestData['extraData']['account']['name']
+        self.walletManager.deduct_balance(requestData['uid'],requestData['amount'],narration,requestData['serviceType'],'Transaction-Debit')
         if (payoutType == 'bank_account'):
             fundAccountData = {
                 "account_type": "bank_account",
