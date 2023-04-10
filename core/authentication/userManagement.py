@@ -245,81 +245,82 @@ class UserManagement:
             return {'error': 'Invalid access level requested'}, 400
 
     def testFunction(self):
-        # userData = {
-        #     "uid": "P4JHNdQLacXaSd8RFN61XUQ7A22",
-        #     "displayName": "Hariom Kushawaha",
-        #     "email": "hariomkushwaha8423@gmail.com",
-        #     "phoneNumber": "8423522492",
-        #     "dob": "1999-01-01",
-        #     "password":"ifZp8w",
-        #     "photoURL": "https://firebasestorage.googleapis.com/v0/b/sit-manager.appspot.com/o/users%2Fdefault%2Fuser.png?alt=media&token=f7502ba7-275f-40a8-92bd-7df725bc7786",
-        #     "gender":"male",
-        #     "access": "guest",
-        #     "state": "Uttar Pradesh",
-        #     "city": "",
-        #     "pincode": "",
-        #     "address": "",
-        #     "aadhaarNumber": "",
-        #     "panNumber": ""
-        # }
-        # splittedDob = userData['dob'].split('-')
-        # data = {
-        #     "displayName": userData['displayName'],
-        #     "email": userData['email'],
-        #     "phoneNumber": userData['phoneNumber'],
-        #     "dob": datetime.datetime(int(splittedDob[0]), int(splittedDob[1]), int(splittedDob[2])),
-        #     "photoURL": userData['photoURL'],
-        #     "gender": userData['gender'],
-        #     "emailVerified": "boolean",
-        #     "access": {"access": userData['access']},
-        #     "status": {
-        #         "isOnline": True,
-        #         "access": 'active'
-        #     },
-        #     "state": userData['state'],
-        #     "city": userData['city'],
-        #     "pincode": userData['pincode'],
-        #     "address": userData['address'],
-        #     "aadhaarNumber": userData['aadhaarNumber'],
-        #     "tutorialCompleted": False,
-        #     "panCardNumber": userData['panNumber'],
-        #     "qrCode": "",
-        #     "onboardingDone": False,
-        #     "payoutDetailsCompleted": False,
-        #     "primaryPayoutAccount": None,
-        #     "payoutFundAccount": [],
-        #     "selfieImage": "",
-        #     "shopImage": "",
-        #     "memberAssigned": True,
-        #     "kycStatus": 'incomplete',
-        #     "onboardingSteps": {
-        #         "phoneDobDone": False,
-        #         "panDone": False,
-        #         "locationDone": False,
-        #         "aadhaarDone": False,
-        #         "photosDone": False,
-        #     },
-        #     "messageToken": ""
-        # }
-        # user = self.auth.create_user(
-        #     uid=userData['uid'],
-        #     phone_number= "+91"+userData['phoneNumber'] ,
-        #     email= userData['email'],
-        #     email_verified=True,
-        #     password=userData['password'],
-        #     display_name=userData['displayName'],
-        #     photo_url=userData["photoURL"],
-        #     disabled=False
-        # )
-        user = self.auth.update_user(
-            uid="YpBrnCoe4laoeY1RmTCZ4pupOys2",
-            password= "Sirsa@12345"
+        userData = {
+            "uid": "JMMBm5iaklNYGiJUFbvLLttgvLJ3",
+            "displayName": "Shweta Verma",
+            "email": "ssspayapi@gmail.com",
+            "phoneNumber": "9616863246",
+            "dob": "1989-10-24",
+            "password":"ifZp8w",
+            "photoURL": "https://firebasestorage.googleapis.com/v0/b/sit-manager.appspot.com/o/users%2Fdefault%2Fuser.png?alt=media&token=f7502ba7-275f-40a8-92bd-7df725bc7786",
+            "gender":"female",
+            "access": "guest",
+            "state": "Uttar Pradesh",
+            "city": "Sonbhadra",
+            "pincode": "",
+            "address": "Shastri Nagar",
+            "aadhaarNumber": "965619308999",
+            "panNumber": "BKGPV2452J"
+        }
+        splittedDob = userData['dob'].split('-')
+        data = {
+            "displayName": userData['displayName'],
+            "email": userData['email'],
+            "phoneNumber": userData['phoneNumber'],
+            "dob": datetime.datetime(int(splittedDob[0]), int(splittedDob[1]), int(splittedDob[2])),
+            "photoURL": userData['photoURL'],
+            "gender": userData['gender'],
+            "emailVerified": "boolean",
+            "access": {"access": userData['access']},
+            "status": {
+                "isOnline": True,
+                "access": 'active'
+            },
+            "state": userData['state'],
+            "city": userData['city'],
+            "pincode": userData['pincode'],
+            "address": userData['address'],
+            "aadhaarNumber": userData['aadhaarNumber'],
+            "tutorialCompleted": False,
+            "panCardNumber": userData['panNumber'],
+            "qrCode": "",
+            "onboardingDone": False,
+            "payoutDetailsCompleted": False,
+            "primaryPayoutAccount": None,
+            "payoutFundAccount": [],
+            "selfieImage": "",
+            "shopImage": "",
+            "memberAssigned": True,
+            "kycStatus": 'incomplete',
+            "onboardingSteps": {
+                "phoneDobDone": False,
+                "panDone": False,
+                "locationDone": False,
+                "aadhaarDone": False,
+                "photosDone": False,
+            },
+            "messageToken": ""
+        }
+        user = self.auth.create_user(
+            uid=userData['uid'],
+            phone_number= "+91"+userData['phoneNumber'] ,
+            email= userData['email'],
+            email_verified=True,
+            password=userData['password'],
+            display_name=userData['displayName'],
+            photo_url=userData["photoURL"],
+            disabled=False
         )
+        # user = self.auth.update_user(
+        #     uid="YpBrnCoe4laoeY1RmTCZ4pupOys2",
+        #     password= "Sirsa@12345"
+        # )
         # # return "Done"
-        # data['userId'] = user.uid
-        # # message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY"
-        # # message = ("Successfully Registered With SSSPay.Your UserID is {name} and Password is {password} do not disclose to anyone").format(
-        # #     name=userData['email'], password=password)
-        # # self.messaging.sendSingleSMS(message, userData['phoneNumber'])
-        # self.firestore.collection('users').document(data['userId']).set(data)
+        password = userData['password']
+        data['userId'] = user.uid
+        message = "Hi "+userData['displayName']+" . Welcome to SSSPay. You are Successfully Registered With Us. Your UserID is "+userData['email']+" and Password is "+password+".Please do not disclose your credentials to anyone. Regards SSSPAY"
+        message = ("Successfully Registered With SSSPay.Your UserID is {name} and Password is {password} do not disclose to anyone").format(
+            name=userData['email'], password=password)
+        self.messaging.sendSingleSMS(message, userData['phoneNumber'])
+        self.firestore.collection('users').document(data['userId']).set(data)
         return "Done"

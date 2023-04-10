@@ -209,11 +209,14 @@ class AEPS:
                 print('-'*20)
                 return response.json(), response.status_code, True
             except:
-                print('Response',response.content)
+                print('Response exception',response.content)
                 print('-'*20)
-                return str(response.content), response.status_code, False
+                if (response.status_code == 200):
+                    return str(response.content), response.status_code, True
+                else:
+                    return str(response.content), response.status_code, False
         else:
-            print('Response',str(response.content))
+            print('Response exception elsed',str(response.content))
             print('-'*20)
             return str(response.content), response.status_code, False
 

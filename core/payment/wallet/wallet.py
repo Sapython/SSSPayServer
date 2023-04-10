@@ -16,7 +16,7 @@ class Wallet:
 
     def add_balance(self,userId, amount,narration,service,actionType):
         print("Increasing Amount: ",amount)
-        updateWrite = self.firestore.collection('users').document(userId).collection('wallet').document('wallet').update({"balance": firestore.Increment(int(amount))})
+        updateWrite = self.firestore.collection('users').document(userId).collection('wallet').document('wallet').update({"balance": firestore.Increment(float(amount))})
         print("Amount increased")
         self.firestore.collection('users').document(userId).collection('walletNarration').add({
             "amount": amount,

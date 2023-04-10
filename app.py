@@ -33,7 +33,8 @@ import razorpay
 from firebase_admin import firestore
 from google.cloud.firestore_v1 import Increment
 import builtins
-import traceback
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 version = "1.0.0"
 
@@ -57,6 +58,12 @@ fs = firestore.client()
 # pylint: disable=C0103
 app = Flask(__name__)
 CORS(app)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["50 per second"],
+    
+)
 aeps = AEPS(app,DEVELOPMENT)
 authService = Authentication(auth, app)
 messaging = Messaging()
@@ -490,6 +497,7 @@ def cancelQueuedPayout():
 
 
 @app.route('/payout/expressPayout', methods=['POST'])
+@limiter.limit("1 per 3 second")
 def expressPayout():
     auth = authorize()
     if(auth[1] != 200):
@@ -540,9 +548,10 @@ def expressPayout():
         transactionValue['uid'] = request.json['uid']
         try:
             response = payout.quickPayout(transactionValue, transactionValue['extraData']['accountType'])
-            if (response['error'] is not None):
-                transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response)
-                return {'error': response['error']}, 400
+            print('LEGACY',response)
+            if (response[0]['error']['source'] is not None):
+                transactionInstance.failedTransaction(request.json['uid'], request.json['transactionId'], response[0])
+                return {'error': response[0]['error']}, 400
             return response[0]
         except Exception as e:
             ## logging.error(e)
@@ -556,6 +565,7 @@ def expressPayout():
 
 
 @app.route('/payout/completeDailyPayout', methods=['POST'])
+@limiter.limit("1 per 3 second")
 def completeDailyPayout():
     transactionValue = transactionInstance.getTransaction(
         request.json['uid'], request.json['transactionId'])
@@ -787,6 +797,8 @@ def rechargeLpg():
             referenceId = request.json['transactionId']
             latitude = transaction['extraData']['latitude']
             longitude = transaction['extraData']['longitude']
+            if amount >= wallet.get_balance(request.json['uid']):
+                return jsonify({'error': "Insufficient balance"}), 400
         except Exception as e:
             ## logging.error(e)
             if DEVELOPMENT:
@@ -794,6 +806,7 @@ def rechargeLpg():
                 return jsonify({"mainError": str(e)}), 400
             return {'error': "Please provide a customerNumber, operatorNumber, referenceId, latitude and longitude "}, 400
         try:
+            
             response = LpgInstance.rechargeLpg(caNumber, operatorNo, amount, referenceId,
                                                latitude, longitude, transaction['extraData']['fields'], transaction['extraData'])
             if (response['status'] == True and response['response_code'] == 1):
@@ -930,6 +943,8 @@ def doRecharge():
             referenceId = request.json['transactionId']
             if not referenceId:
                 return jsonify({'error': "Please provide referenceId"}), 400
+            if amount >= wallet.get_balance(request.json['uid']):
+                return jsonify({'error': "Insufficient balance"}), 400
             response = RechargeInstance.doRecharge(
                 operator, caNumber, amount, referenceId)
             print("repsonse", response)
@@ -1037,6 +1052,8 @@ def payBill():
             latitude = transaction['extraData']['latitude']
             longitude = transaction['extraData']['longitude']
             fetchedBill = transaction['extraData']['bill']['bill_fetch']
+            if amount >= wallet.get_balance(request.json['uid']):
+                return jsonify({'error': "Insufficient balance"}), 400
             response = BillPaymentInstance.payBill(
                 operatorNo, caNumber, amount, referenceId, latitude, longitude, fetchedBill)
             print("response", response)
@@ -1117,6 +1134,8 @@ def payLicBill():
             mode = 'online'
             referenceId = request.json['transactionId']
             billFetch = transaction['extraData']['bill']
+            if amount >= wallet.get_balance(request.json['uid']):
+                return jsonify({'error': "Insufficient balance"}), 400
             response = LicInstance.payLicBill(
                 caNumber, mode, amount, email, referenceId, latitude, longitude, billFetch)
             print(response)
@@ -1213,6 +1232,8 @@ def rechargeFastTag():
             longitude = transaction['extraData']['longitude']
             referenceId = request.json['transactionId']
             bill_fetch = transaction['extraData']['bill_fetch']
+            if amount >= wallet.get_balance(request.json['uid']):
+                return {'error': "Insufficient balance"}, 400
             response = FastTagInstance.recharge(
                 operatorNo, caNumber, amount, referenceId, latitude, longitude, bill_fetch)
             print(response)
@@ -1883,13 +1904,13 @@ def sendSMS():
 
 @app.route('/commission',methods=['POST','GET'])
 def commission():
-    data = fs.collection("users").document("59SmCH28x9Yc5bWZbVCpxWzJ5LB2").collection("transaction").document("qdi32nIynqF26Z6zmqf4").get()
-    print(data)   
-    return commissionManager.setCommission(data.to_dict(),'59SmCH28x9Yc5bWZbVCpxWzJ5LB2','qdi32nIynqF26Z6zmqf4')
-    data = fs.collection("users").document("59SmCH28x9Yc5bWZbVCpxWzJ5LB2").collection("transaction").document("dwxKWF2o1GJsiSD62Yqx").get()
-    print(data)   
-    return commissionManager.setCommission(data.to_dict(),'59SmCH28x9Yc5bWZbVCpxWzJ5LB2','dwxKWF2o1GJsiSD62Yqx')
-    # return commissionManager.getAmount(data.to_dict(),'a7SupfH2A3X5jUjv3TYRhuEWbKx1')
+    uid = "RI6dQbPXSAVTv6E5uvfKUfpPh9n1"
+    transactionId = "0sZx8z9uMiaDDicT5Tzl"
+    data = fs.collection("users").document(uid).collection("transaction").document(transactionId).get()
+    print(data)
+    # wallet.add_balance("YpBrnCoe4laoeY1RmTCZ4pupOys2",0.5,"Testing ",'aeps','Transaction-Refund')
+    # return "Done"
+    return commissionManager.setCommission(data.to_dict(),uid,transactionId)
 
 
 @app.route('/resetPassword/generateOtp',methods=['POST'])
@@ -1977,7 +1998,7 @@ def resetPassword():
             return jsonify({'error': e}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
 
-@app.route('/userAdd',methods=['POST'])
+@app.route('/userAdd',methods=['POST','GET'])
 def userAdd():
     try:
         return userManagement.testFunction()
@@ -2004,6 +2025,10 @@ def verifyUpi():
         if DEVELOPMENT:
             return jsonify({'error': e}), 400
         return jsonify({'error': "We didn't received your data in json format "}), 400
+
+@app.route('/checkTimer',methods=['GET'])
+def checkTimer():
+    return 'ok'
 
 if __name__ == '__main__':
     server_port = os.environ.get('PORT', '8081')

@@ -89,12 +89,20 @@ class Transaction:
             print('Transaction completed', time.time() - startTime)
 
     def checkBalance(self, amount: int, userId: str):
-        data = self.walletManager.get_balance(userId)
-        print("BALANCE",data)
-        if data >= amount:
-            return True
-        else:
+        if (amount <= 0):
             return False
+        data = self.walletManager.get_balance(userId)
+        print("BALANCE-"+userId,data)
+        print("check 1")
+        if data == None:
+            return False
+        print("check 2")
+        if data < amount:
+            print("check 3")
+            return False
+        else:
+            print("check 3")
+            return True
 
     def finishTransactions(self):
         for process in self.processes:

@@ -249,6 +249,7 @@ class Payout:
                     "contact": requestData['extraData']['account']['contact'],
                     "type": "vendor",
                     "notes": {
+                        "userId": requestData['uid'],
                         "payoutType": payoutType,
                         "customerId": requestData['extraData']['customerId']
                     }
@@ -266,6 +267,7 @@ class Payout:
                     "contact": requestData['extraData']['account']['contact'],
                     "type": "vendor",
                     "notes": {
+                        "userId": requestData['uid'],
                         "payoutType": payoutType,
                         "customerId": requestData['extraData']['customerId']
                     }
@@ -284,6 +286,7 @@ class Payout:
                     "contact": requestData['extraData']['account']['contact'],
                     "type": "vendor",
                     "notes": {
+                        "userId": requestData['uid'],
                         "payoutType": payoutType,
                         "customerId": requestData['extraData']['customerId']
                     }
@@ -292,8 +295,8 @@ class Payout:
         else:
             raise Exception("Invalid payout type")
         if requestData['extraData']['accountType'] == 'bank_account':
-            accountNumber = "000405657647"
-            # accountNumber = "4564563801628609"
+            # accountNumber = "000405657647"
+            accountNumber = "4564563801628609"
         elif requestData['extraData']['accountType'] == 'vpa':
             accountNumber = "4564563801628609"
         else:
@@ -306,6 +309,9 @@ class Payout:
         print('PaymentType',requestData['extraData']['paymentType'])
         if self.DEVELOPMENT:
             accountNumber = "2323230045367581"
+
+        if (requestData['extraData']['paymentType'].lower() == 'upi'):
+            requestData['extraData']['paymentType'] = 'UPI'
         payload = json.dumps({
             "account_number": accountNumber,
             "amount": requestData['amount']*100,

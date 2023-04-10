@@ -98,12 +98,29 @@ class CommissionAndCharges:
                                 "access": member['access']['access'],
                                 "balance": self.walletManager.get_balance(member['userId'])
                             })
+        masterCommission = 0
+        for commission in commissions:
+            if (commission['member'] ==currentUser['userId']):
+                print("Found id",commission)
+                masterCommission = commission["amount"]
+        print(masterCommission)
+        # deduct masterCommission from commission amount of every non matching members
+        previousCommission = 0
+        for commission in commissions:
+            print("Commision",commission)
+            val = commission["amount"]
+            if (commission['member'] != currentUser['userId']):
+                print("Deducting",commission["amount"],previousCommission)
+                commission["amount"] = commission["amount"] - previousCommission
+            previousCommission = val
+        print("9")
         self.fs.collection('users').document(userId).collection('transaction').document(transactionId).update({
             "commissions": firestore.ArrayUnion(commissions)
         })
         for commission in commissions:
             narration = "Commission added in wallet from "+userId
-            self.walletManager.add_balance(commission['member'],amount,narration,transactionData['serviceType'],'Commission')
+            print(narration,amount,commission['amount'])
+            self.walletManager.add_balance(commission['member'],commission['amount'],narration,transactionData['serviceType'],'Commission')
             self.fs.collection('users').document(commission['member']).update({"totalCommission": firestore.Increment(commission['amount'])})
             self.fs.collection('users').document(commission['member']).collection('commissions').add({
                 **transactionData,
@@ -114,7 +131,7 @@ class CommissionAndCharges:
                 'transactionType': 'debit',
                 'transactionTime': firestore.SERVER_TIMESTAMP
             })
-        return {"commissions": commissions}, 200
+        return {"commissions": commissions,"type":finalRes}, 200
 
     def getAmount(self, transactionData, userId):
         # print("self.charges",self.charges)
