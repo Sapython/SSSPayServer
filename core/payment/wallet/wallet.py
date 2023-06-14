@@ -31,6 +31,7 @@ class Wallet:
         
 
     def deduct_balance(self,userId, amount,narration,service,actionType):
+        amount = float(amount)
         updateWrite = self.firestore.collection('users').document(userId).collection('wallet').document('wallet').update({"balance": firestore.Increment(-amount)})
         self.firestore.collection('users').document(userId).collection('walletNarration').add({
             "amount": amount,

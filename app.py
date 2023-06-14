@@ -806,8 +806,8 @@ def rechargeLpg():
                 return jsonify({"mainError": str(e)}), 400
             return {'error': "Please provide a customerNumber, operatorNumber, referenceId, latitude and longitude "}, 400
         try:
-            
-            response = LpgInstance.rechargeLpg(caNumber, operatorNo, amount, referenceId,
+            userId = request.json['uid']
+            response = LpgInstance.rechargeLpg(caNumber, operatorNo, amount, referenceId+'-'+userId,
                                                latitude, longitude, transaction['extraData']['fields'], transaction['extraData'])
             if (response['status'] == True and response['response_code'] == 1):
                 print("status", True,)
@@ -945,8 +945,9 @@ def doRecharge():
                 return jsonify({'error': "Please provide referenceId"}), 400
             if amount >= wallet.get_balance(request.json['uid']):
                 return jsonify({'error': "Insufficient balance"}), 400
+            userId = request.json['uid']
             response = RechargeInstance.doRecharge(
-                operator, caNumber, amount, referenceId)
+                operator, caNumber, amount, referenceId+'-'+userId)
             print("repsonse", response)
             startTime = time.time()
             print(time.time())
@@ -1052,21 +1053,22 @@ def payBill():
             latitude = transaction['extraData']['latitude']
             longitude = transaction['extraData']['longitude']
             fetchedBill = transaction['extraData']['bill']['bill_fetch']
-            if amount >= wallet.get_balance(request.json['uid']):
+            if float(amount) >= float(wallet.get_balance(request.json['uid'])):
                 return jsonify({'error': "Insufficient balance"}), 400
             response = BillPaymentInstance.payBill(
                 operatorNo, caNumber, amount, referenceId, latitude, longitude, fetchedBill)
             print("response", response)
             if (response['status'] == True and response['response_code'] == 1):
-                commissionManager.setCommission(transaction, request.json['uid'],request.json['transactionId'])
+                # commissionManager.setCommission(transaction, request.json['uid'],request.json['transactionId'])
                 transactionInstance.completeTransaction(
                     request.json['uid'], request.json['transactionId'],response)
-                wallet.deductBalance(request.json['uid'], amount)
+                wallet.deduct_balance(request.json['uid'], float(amount), 'Bill Payment', 'bbps','Transaction-Debit')
             else:
                 transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'],response)
             return jsonify(response), 200
         except Exception as e:
+            print(e)
             transactionInstance.failedTransaction(
                     request.json['uid'], request.json['transactionId'],response)
             ## logging.error(e)
@@ -1811,13 +1813,15 @@ def checkOnboardingStatus():
 
 @app.route('/onboarding/callback', methods=['POST'])
 def onboardingCallback():
+    print("specialCallbacks",request)
+    print("specialCallbacks",request.view_args['data'])
     return {"status": 200, "message": "Transaction completed successfully"}
     # auth = authorize()
     # if(auth[1] != 200):
     #     return jsonify(auth[0]), auth[1]
     # try:
     #     if (request.view_args['data']):
-    #         response = onboarding.decodeCallbackData(request.view_args['data'])
+            # response = onboarding.decodeCallbackData(request.view_args['data'])
     #         print(response)
     #         return response
     # except Exception as e:
@@ -1839,6 +1843,8 @@ def razorpayCallback():
             if (request.json["event"]=='payout.processed'):
                 transactionValue = transactionInstance.getTransaction(request.json["payload"]["payout"]["entity"]["notes"]['userId'],request.json["payload"]["payout"]["entity"]["reference_id"])
                 if (transactionValue['serviceType'] in ['expressPayoutUpi','expressPayoutImps','payoutImps','payoutUPI']):
+                    if (transactionValue.get('additionalAmount') == None):
+                        transactionValue['additionalAmount'] = 0
                     if (transactionValue['extraData']['dailyPayoutTime']):
                         if (datetime.datetime.now().strftime("%d/%m/%Y") != transactionValue['extraData']['dailyPayoutTime']):
                             narration = "Refund for free daily payout"

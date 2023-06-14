@@ -134,7 +134,7 @@ class CommissionAndCharges:
         return {"commissions": commissions,"type":finalRes}, 200
 
     def getAmount(self, transactionData, userId):
-        # print("self.charges",self.charges)
+        print("self.charges",self.charges)
         result = list(sorted(list(filter(
             lambda x: x['service'] == transactionData['serviceType'], self.charges)), key=lambda y: y['minimumAmount']))
         print("Charge", result)

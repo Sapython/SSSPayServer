@@ -15,7 +15,7 @@ class Payout:
         self.secretKey = '0bbPbrfVDHYc7gJNgCCbBxdr'
         self.fs = firestore.client()
         self.walletManager = Wallet()
-        self.commisionManager = CommissionAndCharges()
+        self.commissionManager = CommissionAndCharges()
         self.accountNumberVpa = ""
         self.accountNumberBank = ""
         self.app = app
@@ -219,12 +219,14 @@ class Payout:
         if (requestData['amount'] <= 0 and requestData['amount'] > requestData['balance']):
             return {"error":"Not enough balance.","message":"Not enough balance."}, 400
         chargeable = False
-        if (datetime.datetime.now().strftime("%d/%m/%Y") != requestData['extraData']['dailyPayoutTime']):
+        print("CHECKING ",datetime.datetime.now().strftime("%d/%m/%Y"),requestData['extraData']['dailyPayoutTime'],requestData['referenceId'])
+        if (datetime.datetime.now().strftime("%d/%m/%Y") == requestData['extraData']['dailyPayoutTime']):
             chargeable = True
         print(requestData)
         url = f"https://api.razorpay.com/v1/payouts"
+        print("isChargeable",chargeable)
         if (chargeable):
-            charge = self.commisionManager.getAmount(requestData,requestData['uid'])
+            charge = self.commissionManager.getAmount(requestData,requestData['uid'])
             print("TOTAL CHARGE",charge)
             requestData['amount'] = requestData['amount'] - charge
         if (requestData['amount'] <= 0 and requestData['amount'] > requestData['balance']):

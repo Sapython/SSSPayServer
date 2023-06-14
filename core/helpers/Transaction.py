@@ -21,18 +21,21 @@ class Transaction:
         return self.fs.collection('users').document(userId).collection('transaction').document(transactionId).get().to_dict()
 
     def pendingTransaction(self, userId: str, transactionId: str, successData: dict):
+        print("Pending transaction",transactionId)
         process = Thread(target=self.pendingTransactionProcess, args=(
             userId, transactionId, successData))
         self.processes.append(process)
         process.start()
 
     def completeTransaction(self, userId: str, transactionId: str, successData: dict):
+        print("Success transaction",transactionId)
         process = Thread(target=self.completeTransactionProcess, args=(
             userId, transactionId, successData))
         self.processes.append(process)
         process.start()
 
     def failedTransaction(self, userId: str, transactionId: str, successData: dict):
+        print("Failed transaction",transactionId)
         process = Thread(target=self.failedTransactionProcess, args=(
             userId, transactionId, successData))
         self.processes.append(process)
